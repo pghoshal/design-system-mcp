@@ -463,6 +463,13 @@ Example `validate_ui` request:
 }
 ```
 
+`validate_ui` also runs built-in semantic token checks:
+
+- `no-raw-length-values` blocks raw `px`, `rem`, and `em` values.
+- `no-raw-color-functions` blocks raw `rgb()`, `rgba()`, `hsl()`, and `hsla()` values.
+- `no-unknown-css-vars` blocks token-like CSS variables that do not resolve to known design tokens.
+- `prefer-semantic-tokens` warns when app code uses primitive tokens instead of semantic aliases.
+
 Recommended harness flow for stronger design consistency:
 
 1. Call `describe_schema`.

@@ -375,7 +375,7 @@ Completed in the first Phase 4 slice above. Remaining hardening:
 - MDX documentation parser
 - Storybook story parser for examples and variants
 - Accessibility validation rules
-- Token usage validation beyond raw hex: raw px, unknown CSS vars, off-scale semantic usage
+- Semantic token validation beyond raw hex: raw length values, raw color functions, unknown CSS vars, primitive token warnings
 - Copy/voice validation rules
 - Dependency/import guidance per component package
 - Rich relation inference: components ↔ tokens ↔ patterns ↔ principles ↔ validation rules

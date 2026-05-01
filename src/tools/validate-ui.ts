@@ -4,6 +4,7 @@ import type { Violation } from "../bundle/types.js";
 import type { ToolHandler } from "../server/types.js";
 import { ToolError } from "../util/errors.js";
 import { runRegexDetector } from "../validation/regex.js";
+import { SEMANTIC_TOKEN_RULE_IDS, runSemanticTokenValidation } from "../validation/tokens.js";
 
 const ViolationSchema = z.object({
   ruleId: z.string(),
@@ -12,6 +13,7 @@ const ViolationSchema = z.object({
   line: z.number().int().positive().optional(),
   column: z.number().int().positive().optional(),
   match: z.string().optional(),
+  suggestion: z.string().optional(),
 });
 
 export const ValidateUiInput = z.object({
@@ -39,7 +41,7 @@ export const handler: ToolHandler<typeof ValidateUiInput, typeof ValidateUiOutpu
 
     // If caller asked for specific rules, every requested id must exist.
     if (args.rules.length > 0) {
-      const known = new Set(allRules.map((r) => r.id));
+      const known = new Set([...allRules.map((r) => r.id), ...SEMANTIC_TOKEN_RULE_IDS]);
       for (const id of args.rules) {
         if (!known.has(id)) {
           throw new ToolError("invalid_input", `unknown rule id: ${id}`);
@@ -59,6 +61,8 @@ export const handler: ToolHandler<typeof ValidateUiInput, typeof ValidateUiOutpu
         violations.push(...runRegexDetector(rule, args.code));
       }
     }
+    const semantic = runSemanticTokenValidation(bundle, args.code, args.language, requested);
+    violations.push(...semantic.violations);
 
     violations.sort((a, b) => {
       const la = a.line ?? 0;
@@ -72,7 +76,7 @@ export const handler: ToolHandler<typeof ValidateUiInput, typeof ValidateUiOutpu
     return {
       ok,
       violations,
-      ranRules: applicable.map((r) => r.id),
+      ranRules: [...applicable.map((r) => r.id), ...semantic.ranRules],
       bundleVersion: bundle.version,
     };
   },

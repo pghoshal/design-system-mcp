@@ -160,6 +160,7 @@ export interface Violation {
   line?: number | undefined;
   column?: number | undefined;
   match?: string | undefined;
+  suggestion?: string | undefined;
 }
 
 /**

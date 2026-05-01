@@ -45,6 +45,106 @@ describe("validate_ui", () => {
     expect(r.violations).toEqual([]);
   });
 
+  it("reports raw spacing values", async () => {
+    const r = await handler.handle(
+      {
+        code: "const style = { padding: '16px' };",
+        language: "tsx",
+        rules: [],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.violations.some((v) => v.ruleId === "no-raw-length-values")).toBe(true);
+  });
+
+  it("reports raw color functions", async () => {
+    const r = await handler.handle(
+      {
+        code: "const style = { color: 'rgb(37, 99, 235)' };",
+        language: "tsx",
+        rules: [],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.violations.some((v) => v.ruleId === "no-raw-color-functions")).toBe(true);
+  });
+
+  it("reports unknown CSS token variables", async () => {
+    const r = await handler.handle(
+      {
+        code: ".x { color: var(--color-action-missing); }",
+        language: "css",
+        rules: [],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.violations.some((v) => v.ruleId === "no-unknown-css-vars")).toBe(true);
+  });
+
+  it("reports unknown CSS token variables with fallback arguments", async () => {
+    const r = await handler.handle(
+      {
+        code: ".x { color: var(--color-action-missing, var(--color-action-primary)); }",
+        language: "css",
+        rules: ["no-unknown-css-vars"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.violations).toHaveLength(1);
+    expect(r.violations[0]?.ruleId).toBe("no-unknown-css-vars");
+    expect(r.violations[0]?.match).toBe("var(--color-action-missing, var(--color-action-primary))");
+  });
+
+  it("ignores non-token CSS custom properties", async () => {
+    const r = await handler.handle(
+      {
+        code: [
+          ".x {",
+          "  transform-origin: var(--radix-popover-content-transform-origin);",
+          "  --local: var(--color-picker-thumb);",
+          "  font-family: var(--font-loading-state);",
+          "}",
+        ].join("\n"),
+        language: "css",
+        rules: ["no-unknown-css-vars"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.violations).toEqual([]);
+  });
+
+  it("warns when app code uses primitive CSS token variables", async () => {
+    const r = await handler.handle(
+      {
+        code: ".x { color: var(--color-blue-500); }",
+        language: "css",
+        rules: [],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.violations.some((v) => v.ruleId === "prefer-semantic-tokens")).toBe(true);
+  });
+
+  it("can run a selected built-in semantic token rule", async () => {
+    const r = await handler.handle(
+      {
+        code: ".x { color: var(--color-action-missing); padding: 16px; }",
+        language: "css",
+        rules: ["no-unknown-css-vars"],
+      },
+      ctx(),
+    );
+    expect(r.ranRules).toEqual(["no-unknown-css-vars"]);
+    expect(r.violations).toHaveLength(1);
+    expect(r.violations[0]?.ruleId).toBe("no-unknown-css-vars");
+  });
+
   it("reports a hex-color violation with line/column", async () => {
     const r = await handler.handle(
       {
