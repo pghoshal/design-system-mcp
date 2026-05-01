@@ -5,6 +5,19 @@
   "summary": "Container for grouped related content and actions.",
   "package": "@acme/ui",
   "importPath": "@acme/ui/card",
+  "dependencies": [
+    {
+      "package": "@acme/ui",
+      "version": "^2.0.0",
+      "type": "runtime",
+      "reason": "Provides the Card component implementation."
+    }
+  ],
+  "importGuidance": {
+    "named": ["Card"],
+    "sideEffects": [],
+    "notes": ["Use Card for grouped content; do not use it as a page-level landmark."]
+  },
   "status": "stable",
   "tags": ["layout", "content"],
   "props": [

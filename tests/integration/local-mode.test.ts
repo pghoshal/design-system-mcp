@@ -332,6 +332,9 @@ describe("Phase 1 — local mode integration", () => {
         ctx(),
       );
       expect(r.importPath).toBe("@acme/ui/button");
+      expect(r.dependencies?.map((dep) => dep.package)).toEqual(["@acme/ui", "react"]);
+      expect(r.importGuidance?.named).toEqual(["Button"]);
+      expect(r.importGuidance?.notes[0]).toMatch(/do not deep-import/i);
       expect(r.examples.length).toBeGreaterThan(0);
       expect(r.examples[0]?.code).toMatch(/<Button/);
       expect(r.constraints.map((c) => c.id)).toContain("button-specific-label");

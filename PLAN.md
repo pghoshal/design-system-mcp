@@ -377,7 +377,7 @@ Completed in the first Phase 4 slice above. Remaining hardening:
 - Implemented: accessibility validation rules for image alt text, accessible names, labels, tabindex, autofocus
 - Implemented: semantic token validation beyond raw hex for raw length values, raw color functions, unknown CSS vars, primitive token warnings
 - Implemented: copy/voice validation rules for blame, hype, vague action labels, destructive hedging
-- Dependency/import guidance per component package
+- Implemented: dependency/import guidance per component package
 - Implemented: deterministic relation inference from explicit entity-id references
 - Implemented: schema/content coverage inspection for deterministic generation readiness
 - Harness workflow docs: discover → recommend → fetch usage → validate composition → generate → validate UI → repair

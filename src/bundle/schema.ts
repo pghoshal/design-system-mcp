@@ -119,6 +119,25 @@ export const UsageExampleSchema = z.object({
   description: z.string().optional(),
 });
 
+export const ComponentDependencySchema = z
+  .object({
+    package: z.string().min(1).max(128),
+    version: z.string().min(1).max(64).optional(),
+    type: z.enum(["runtime", "peer", "dev"]).default("runtime"),
+    reason: z.string().min(1).max(1_000).optional(),
+  })
+  .strict();
+
+export const ImportGuidanceSchema = z
+  .object({
+    named: z.array(z.string().min(1).max(128)).default([]),
+    default: z.string().min(1).max(128).optional(),
+    namespace: z.string().min(1).max(128).optional(),
+    sideEffects: z.array(z.string().min(1).max(256)).default([]),
+    notes: z.array(z.string().min(1).max(1_000)).default([]),
+  })
+  .strict();
+
 export const ComponentPropSchema = z.object({
   name: z.string().min(1).max(64),
   type: z.string().min(1).max(256),
@@ -152,6 +171,8 @@ export const ComponentMetadataSchema = z.object({
   summary: z.string().min(1).max(1_000),
   package: z.string().min(1).max(128).optional(),
   importPath: z.string().min(1).max(256),
+  dependencies: z.array(ComponentDependencySchema).default([]),
+  importGuidance: ImportGuidanceSchema.optional(),
   status: z.enum(["stable", "experimental", "deprecated"]).default("stable"),
   tags: z.array(z.string().min(1).max(64)).default([]),
   props: z.array(ComponentPropSchema).default([]),

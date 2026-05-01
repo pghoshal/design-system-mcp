@@ -110,6 +110,16 @@ function componentIssues(bundle: Bundle): CoverageIssue[] {
         issue("component-import-missing", "error", entity, "Component is missing importPath."),
       );
     }
+    if (!Array.isArray(data.dependencies) || data.dependencies.length === 0) {
+      issues.push(
+        issue(
+          "component-dependencies-empty",
+          "warning",
+          entity,
+          "Component has no package dependency guidance.",
+        ),
+      );
+    }
     if (!Array.isArray(data.props) || data.props.length === 0) {
       issues.push(
         issue("component-props-empty", "warning", entity, "Component has no prop metadata."),

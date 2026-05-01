@@ -262,6 +262,19 @@ When Storybook CSF files such as `Card.stories.tsx` are present, object stories 
   "summary": "Action trigger for primary, secondary, and destructive user actions.",
   "package": "@acme/ui",
   "importPath": "@acme/ui/button",
+  "dependencies": [
+    {
+      "package": "@acme/ui",
+      "version": "^2.0.0",
+      "type": "runtime",
+      "reason": "Provides the Button component implementation."
+    }
+  ],
+  "importGuidance": {
+    "named": ["Button"],
+    "sideEffects": [],
+    "notes": ["Import Button from @acme/ui/button; do not deep-import internal files."]
+  },
   "status": "stable",
   "tags": ["action", "form"],
   "props": [

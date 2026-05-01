@@ -86,6 +86,21 @@ export interface UsageExample {
   description?: string | undefined;
 }
 
+export interface ComponentDependency {
+  package: string;
+  version?: string | undefined;
+  type: "runtime" | "peer" | "dev";
+  reason?: string | undefined;
+}
+
+export interface ImportGuidance {
+  named: string[];
+  default?: string | undefined;
+  namespace?: string | undefined;
+  sideEffects: string[];
+  notes: string[];
+}
+
 export interface ComponentProp {
   name: string;
   type: string;
@@ -109,6 +124,8 @@ export interface ComponentMetadata {
   summary: string;
   package?: string | undefined;
   importPath: string;
+  dependencies: ComponentDependency[];
+  importGuidance?: ImportGuidance | undefined;
   status: "stable" | "experimental" | "deprecated";
   tags: string[];
   props: ComponentProp[];

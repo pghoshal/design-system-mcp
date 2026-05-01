@@ -27,7 +27,7 @@ describe("inspect_coverage", () => {
             type: "component",
             summary: "Missing import path and unresolved relation.",
             tags: [],
-            data: { props: [], examples: [], principles: [] },
+            data: { props: [], examples: [], principles: [], importPath: "" },
             related: ["token:missing"],
             source: { path: "components/Bad/component.json" },
           },
@@ -46,6 +46,7 @@ describe("inspect_coverage", () => {
     expect(r.ok).toBe(false);
     expect(r.issues.map((issue) => issue.id)).toContain("required-type-empty");
     expect(r.issues.map((issue) => issue.id)).toContain("component-import-missing");
+    expect(r.issues.map((issue) => issue.id)).toContain("component-dependencies-empty");
     expect(r.issues.map((issue) => issue.id)).toContain("relation-target-missing");
     expect(
       r.issues.some((issue) => issue.id === "declared-type-empty" && issue.type === "token"),
