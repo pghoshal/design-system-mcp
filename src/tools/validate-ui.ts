@@ -4,10 +4,15 @@ import type { Violation } from "../bundle/types.js";
 import type { ToolHandler } from "../server/types.js";
 import { ToolError } from "../util/errors.js";
 import { ACCESSIBILITY_RULE_IDS, runAccessibilityValidation } from "../validation/accessibility.js";
+import { COPY_RULE_IDS, runCopyValidation } from "../validation/copy.js";
 import { runRegexDetector } from "../validation/regex.js";
 import { SEMANTIC_TOKEN_RULE_IDS, runSemanticTokenValidation } from "../validation/tokens.js";
 
-const BUILT_IN_RULE_IDS = [...SEMANTIC_TOKEN_RULE_IDS, ...ACCESSIBILITY_RULE_IDS] as const;
+const BUILT_IN_RULE_IDS = [
+  ...SEMANTIC_TOKEN_RULE_IDS,
+  ...ACCESSIBILITY_RULE_IDS,
+  ...COPY_RULE_IDS,
+] as const;
 
 const ViolationSchema = z.object({
   ruleId: z.string(),
@@ -68,6 +73,8 @@ export const handler: ToolHandler<typeof ValidateUiInput, typeof ValidateUiOutpu
     violations.push(...semantic.violations);
     const accessibility = runAccessibilityValidation(args.code, args.language, requested);
     violations.push(...accessibility.violations);
+    const copy = runCopyValidation(bundle, args.code, args.language, requested);
+    violations.push(...copy.violations);
 
     violations.sort((a, b) => {
       const la = a.line ?? 0;
@@ -81,7 +88,12 @@ export const handler: ToolHandler<typeof ValidateUiInput, typeof ValidateUiOutpu
     return {
       ok,
       violations,
-      ranRules: [...applicable.map((r) => r.id), ...semantic.ranRules, ...accessibility.ranRules],
+      ranRules: [
+        ...applicable.map((r) => r.id),
+        ...semantic.ranRules,
+        ...accessibility.ranRules,
+        ...copy.ranRules,
+      ],
       bundleVersion: bundle.version,
     };
   },

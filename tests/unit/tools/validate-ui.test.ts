@@ -247,6 +247,102 @@ describe("validate_ui", () => {
     ]);
   });
 
+  it("reports blame language in UI copy", async () => {
+    const r = await handler.handle(
+      {
+        code: "<p>You forgot to add a project name.</p>",
+        language: "tsx",
+        rules: ["copy-no-blame"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.violations[0]?.ruleId).toBe("copy-no-blame");
+  });
+
+  it("reports hype and exclamation marks in UI copy", async () => {
+    const r = await handler.handle(
+      {
+        code: "<p>Awesome! Saved!</p>",
+        language: "tsx",
+        rules: ["copy-no-hype"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.violations[0]?.ruleId).toBe("copy-no-hype");
+  });
+
+  it("reports vague action labels", async () => {
+    const r = await handler.handle(
+      {
+        code: "<button>Submit</button>",
+        language: "tsx",
+        rules: ["copy-no-vague-actions"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.violations[0]?.ruleId).toBe("copy-no-vague-actions");
+  });
+
+  it("reports vague action labels in JSX string-expression attributes", async () => {
+    const r = await handler.handle(
+      {
+        code: '<IconButton aria-label={"Submit"} />',
+        language: "tsx",
+        rules: ["copy-no-vague-actions"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.violations[0]?.ruleId).toBe("copy-no-vague-actions");
+  });
+
+  it("reports vague action labels in component label props", async () => {
+    const r = await handler.handle(
+      {
+        code: '<Button label="Submit" />',
+        language: "tsx",
+        rules: ["copy-no-vague-actions"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.violations[0]?.ruleId).toBe("copy-no-vague-actions");
+  });
+
+  it("reports hedging in destructive copy", async () => {
+    const r = await handler.handle(
+      {
+        code: "<p>This might delete the project.</p>",
+        language: "tsx",
+        rules: ["copy-no-destructive-hedging"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.violations[0]?.ruleId).toBe("copy-no-destructive-hedging");
+  });
+
+  it("accepts direct calm copy", async () => {
+    const r = await handler.handle(
+      {
+        code: "<button>Delete project</button><p>This cannot be undone.</p>",
+        language: "tsx",
+        rules: [
+          "copy-no-blame",
+          "copy-no-hype",
+          "copy-no-vague-actions",
+          "copy-no-destructive-hedging",
+        ],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.violations).toEqual([]);
+  });
+
   it("reports a hex-color violation with line/column", async () => {
     const r = await handler.handle(
       {

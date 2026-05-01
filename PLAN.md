@@ -376,7 +376,7 @@ Completed in the first Phase 4 slice above. Remaining hardening:
 - Storybook story parser for examples and variants
 - Implemented: accessibility validation rules for image alt text, accessible names, labels, tabindex, autofocus
 - Implemented: semantic token validation beyond raw hex for raw length values, raw color functions, unknown CSS vars, primitive token warnings
-- Copy/voice validation rules
+- Implemented: copy/voice validation rules for blame, hype, vague action labels, destructive hedging
 - Dependency/import guidance per component package
 - Rich relation inference: components ↔ tokens ↔ patterns ↔ principles ↔ validation rules
 - Harness workflow docs: discover → recommend → fetch usage → validate composition → generate → validate UI → repair

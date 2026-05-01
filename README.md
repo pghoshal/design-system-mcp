@@ -463,7 +463,7 @@ Example `validate_ui` request:
 }
 ```
 
-`validate_ui` also runs built-in semantic token and accessibility checks:
+`validate_ui` also runs built-in semantic token, accessibility, and copy/voice checks:
 
 - `no-raw-length-values` blocks raw `px`, `rem`, and `em` values.
 - `no-raw-color-functions` blocks raw `rgb()`, `rgba()`, `hsl()`, and `hsla()` values.
@@ -475,6 +475,10 @@ Example `validate_ui` request:
 - `a11y-form-control-label` requires inputs, selects, and textareas to have labels or accessible names.
 - `a11y-no-positive-tabindex` blocks positive tab order overrides.
 - `a11y-no-autofocus` warns when markup uses autofocus.
+- `copy-no-blame` blocks copy that blames the user.
+- `copy-no-hype` warns on hype, alarmism, and exclamation marks.
+- `copy-no-vague-actions` warns on vague action labels such as "Submit" or "Process".
+- `copy-no-destructive-hedging` warns when destructive copy uses hedging language.
 
 Recommended harness flow for stronger design consistency:
 
