@@ -117,6 +117,17 @@ describe("Phase 1 — local mode integration", () => {
       expect((r.entity.data.body as string).length).toBeGreaterThan(50);
     });
 
+    it("returns a pattern with a machine-checkable contract", async () => {
+      const r = await getEntityHandler.handle(
+        { id: "pattern:confirmation-dialog", resolve_relations: false },
+        ctx(),
+      );
+      expect(r.entity.data.contract).toMatchObject({
+        requiredComponents: ["component:button"],
+        requiredTokens: ["token:color.action.danger"],
+      });
+    });
+
     it("throws not_found on unknown id", async () => {
       await expect(
         getEntityHandler.handle({ id: "token:nope.nope", resolve_relations: false }, ctx()),
@@ -227,6 +238,36 @@ describe("Phase 1 — local mode integration", () => {
       expect(r.ok).toBe(false);
       expect(r.violations.some((v) => v.path === "props.children")).toBe(true);
       expect(r.violations.some((v) => v.path === "props.variant")).toBe(true);
+    });
+
+    it("validate_composition enforces pattern contract required tokens", async () => {
+      const r = await validateCompositionHandler.handle(
+        {
+          pattern: "pattern:confirmation-dialog",
+          components: [
+            { id: "component:button", props: { variant: "danger", children: "Delete project" } },
+          ],
+          tokens: [],
+        },
+        ctx(),
+      );
+      expect(r.ok).toBe(false);
+      expect(r.violations.some((v) => v.path === "tokens")).toBe(true);
+    });
+
+    it("validate_composition passes a complete confirmation-dialog contract", async () => {
+      const r = await validateCompositionHandler.handle(
+        {
+          pattern: "pattern:confirmation-dialog",
+          components: [
+            { id: "component:button", props: { variant: "danger", children: "Delete project" } },
+          ],
+          tokens: ["token:color.action.danger"],
+        },
+        ctx(),
+      );
+      expect(r.ok).toBe(true);
+      expect(r.violations).toEqual([]);
     });
 
     it("validate_composition rejects non-pattern ids in the pattern field", async () => {

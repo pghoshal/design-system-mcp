@@ -206,6 +206,26 @@ tags: [principle, accessibility]
 Use plain language and obvious affordances.
 ```
 
+Pattern docs can also include a machine-checkable `contract` in frontmatter. `validate_composition` enforces this before code generation.
+
+```yaml
+contract:
+  requiredComponents:
+    - component:button
+  requiredTokens:
+    - token:color.action.danger
+  requiredPrinciples:
+    - principle:clarity
+  slots:
+    - name: confirm-action
+      required: true
+      component: component:button
+  constraints:
+    - id: confirmation-specific-copy
+      severity: warning
+      message: Confirmation copy must name the object and irreversible action.
+```
+
 ### Prompt Templates
 
 Prompt files live under `prompts/*.prompt.md`:

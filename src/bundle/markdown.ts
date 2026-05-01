@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import type { Logger } from "../observability/logger.js";
-import { FrontmatterSchema, PromptFrontmatterSchema } from "./schema.js";
+import { FrontmatterSchema, PatternContractSchema, PromptFrontmatterSchema } from "./schema.js";
 import type { Entity, PromptTemplate } from "./types.js";
 
 interface MdSourceConfig {
@@ -32,7 +32,7 @@ export async function loadMarkdown(repoPath: string, logger: Logger): Promise<En
     if (!(await dirExists(dirAbs))) continue;
     const files = await listMarkdownFiles(dirAbs);
     for (const file of files) {
-      const ent = await readMdEntity(file, repoPath, src.defaultType);
+      const ent = await readMdEntity(file, repoPath, src.defaultType, logger);
       if (ent) entities.push(ent);
     }
   }
@@ -40,7 +40,7 @@ export async function loadMarkdown(repoPath: string, logger: Logger): Promise<En
   // voice-and-tone.md — single file mapped to one voice entity (top-level summary)
   const voicePath = path.join(repoPath, "docs/voice-and-tone.md");
   if (await fileExists(voicePath)) {
-    const ent = await readMdEntity(voicePath, repoPath, "voice");
+    const ent = await readMdEntity(voicePath, repoPath, "voice", logger);
     if (ent) entities.push(ent);
   }
 
@@ -52,6 +52,7 @@ async function readMdEntity(
   filePath: string,
   repoPath: string,
   defaultType: string,
+  logger: Logger,
 ): Promise<Entity | null> {
   const raw = await fs.readFile(filePath, "utf8");
   const { data, content } = matter(raw);
@@ -68,13 +69,26 @@ async function readMdEntity(
   const title = (fm.title as string | undefined) ?? humanizeSlug(slug);
   const summary = (fm.summary as string | undefined) ?? deriveSummary(content) ?? title;
   const tags = Array.isArray(fm.tags) ? fm.tags : [];
+  const dataRecord: Record<string, unknown> = { title, body: content.trim() };
+
+  if (type === "pattern" && fm.contract !== undefined) {
+    const contractResult = PatternContractSchema.safeParse(fm.contract);
+    if (contractResult.success) {
+      dataRecord.contract = contractResult.data;
+    } else {
+      logger.warn(
+        { file: path.relative(repoPath, filePath), errors: contractResult.error.format() },
+        "pattern contract invalid; skipping contract",
+      );
+    }
+  }
 
   return {
     id,
     type,
     summary,
     tags,
-    data: { title, body: content.trim() },
+    data: dataRecord,
     related: fm.related,
     source: { path: path.relative(repoPath, filePath) },
   };

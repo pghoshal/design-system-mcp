@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ComponentProp, Entity } from "../bundle/types.js";
+import type { ComponentProp, Entity, PatternContract } from "../bundle/types.js";
 import type { ToolHandler } from "../server/types.js";
 
 const ComponentUsageSchema = z.object({
@@ -74,6 +74,16 @@ export const handler: ToolHandler<
       validateComponent(entity, usage.props, args.pattern, violations);
     }
 
+    if (patternEntity?.type === "pattern") {
+      validatePatternContract(
+        patternEntity,
+        args.components.map((c) => c.id),
+        args.tokens,
+        bundle.entities,
+        violations,
+      );
+    }
+
     return {
       ok: !violations.some((v) => v.severity === "error"),
       violations,
@@ -146,4 +156,82 @@ function validateComponent(
       message: `${entity.id} is not declared as suitable for ${pattern}.`,
     });
   }
+}
+
+function validatePatternContract(
+  pattern: Entity,
+  componentIds: string[],
+  tokenIds: string[],
+  entities: ReadonlyMap<string, Entity>,
+  violations: z.infer<typeof CompositionViolationSchema>[],
+): void {
+  const contract = pattern.data.contract as PatternContract | undefined;
+  if (!contract) return;
+
+  const selectedComponents = new Set(componentIds);
+  const selectedTokens = new Set(tokenIds);
+
+  for (const id of contract.requiredComponents) {
+    if (!selectedComponents.has(id)) {
+      violations.push({
+        entityId: pattern.id,
+        severity: "error",
+        path: "components",
+        message: `${pattern.id} requires component '${id}'.`,
+      });
+    }
+  }
+
+  for (const id of contract.forbiddenComponents) {
+    if (selectedComponents.has(id)) {
+      violations.push({
+        entityId: pattern.id,
+        severity: "error",
+        path: "components",
+        message: `${pattern.id} forbids component '${id}'.`,
+      });
+    }
+  }
+
+  for (const id of contract.requiredTokens) {
+    if (!selectedTokens.has(id)) {
+      violations.push({
+        entityId: pattern.id,
+        severity: "error",
+        path: "tokens",
+        message: `${pattern.id} requires token '${id}'.`,
+      });
+    }
+  }
+
+  for (const id of contract.requiredPrinciples) {
+    const covered = componentIds.some((componentId) => {
+      const component = entities.get(componentId);
+      const principles = component?.data.principles;
+      return Array.isArray(principles) && principles.includes(id);
+    });
+    if (!covered) {
+      violations.push({
+        entityId: pattern.id,
+        severity: "warning",
+        path: "components",
+        message: `${pattern.id} expects selected components to follow principle '${id}'.`,
+      });
+    }
+  }
+
+  for (const slot of contract.slots) {
+    if (slot.required && slot.component && !selectedComponents.has(slot.component)) {
+      violations.push({
+        entityId: pattern.id,
+        severity: "error",
+        path: `slots.${slot.name}`,
+        message: `Required slot '${slot.name}' expects component '${slot.component}'.`,
+      });
+    }
+  }
+
+  // Free-form contract constraints are guidance unless/until they have a
+  // machine-checkable predicate. They are exposed through get_entity/get_usage
+  // and should not be reported as validation violations by default.
 }

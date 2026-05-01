@@ -116,6 +116,23 @@ export interface ComponentMetadata {
   related: string[];
 }
 
+export interface PatternContractSlot {
+  name: string;
+  required: boolean;
+  component?: string | undefined;
+  description?: string | undefined;
+}
+
+export interface PatternContract {
+  requiredComponents: string[];
+  optionalComponents: string[];
+  forbiddenComponents: string[];
+  requiredTokens: string[];
+  requiredPrinciples: string[];
+  slots: PatternContractSlot[];
+  constraints: DesignConstraint[];
+}
+
 export type RuleSeverity = "error" | "warning" | "info";
 export type RuleLanguage = "tsx" | "jsx" | "ts" | "js" | "css" | "html" | "vue";
 

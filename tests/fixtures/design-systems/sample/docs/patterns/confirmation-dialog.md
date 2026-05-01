@@ -5,6 +5,22 @@ title: Confirmation Dialog
 summary: Modal pattern for confirming destructive or irreversible actions before they execute.
 tags: [pattern, modal, destructive]
 related: [principle:clarity]
+contract:
+  requiredComponents:
+    - component:button
+  requiredTokens:
+    - token:color.action.danger
+  requiredPrinciples:
+    - principle:clarity
+  slots:
+    - name: confirm-action
+      required: true
+      component: component:button
+      description: Destructive confirmation action.
+  constraints:
+    - id: confirmation-specific-copy
+      severity: warning
+      message: Confirmation copy must name the object and irreversible action.
 ---
 
 # Confirmation Dialog

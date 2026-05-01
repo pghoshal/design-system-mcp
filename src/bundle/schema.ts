@@ -123,16 +123,18 @@ export const ComponentPropSchema = z.object({
   default: z.union([z.string(), z.number(), z.boolean()]).optional(),
 });
 
-export const DesignConstraintSchema = z.object({
-  id: z
-    .string()
-    .min(1)
-    .max(96)
-    .regex(/^[a-z][a-z0-9-]*$/i, "id must match [a-zA-Z][a-zA-Z0-9-]*"),
-  severity: z.enum(["error", "warning", "info"]).default("warning"),
-  message: z.string().min(1).max(2_000),
-  rationale: z.string().max(4_000).optional(),
-});
+export const DesignConstraintSchema = z
+  .object({
+    id: z
+      .string()
+      .min(1)
+      .max(96)
+      .regex(/^[a-z][a-z0-9-]*$/i, "id must match [a-zA-Z][a-zA-Z0-9-]*"),
+    severity: z.enum(["error", "warning", "info"]).default("warning"),
+    message: z.string().min(1).max(2_000),
+    rationale: z.string().max(4_000).optional(),
+  })
+  .strict();
 
 export const ComponentMetadataSchema = z.object({
   id: z
@@ -157,6 +159,29 @@ export const ComponentMetadataSchema = z.object({
 });
 
 export type ComponentMetadataFile = z.infer<typeof ComponentMetadataSchema>;
+
+export const PatternContractSlotSchema = z
+  .object({
+    name: z.string().min(1).max(96),
+    required: z.boolean().default(false),
+    component: z.string().min(1).max(256).optional(),
+    description: z.string().max(1_000).optional(),
+  })
+  .strict();
+
+export const PatternContractSchema = z
+  .object({
+    requiredComponents: z.array(z.string().min(1).max(256)).default([]),
+    optionalComponents: z.array(z.string().min(1).max(256)).default([]),
+    forbiddenComponents: z.array(z.string().min(1).max(256)).default([]),
+    requiredTokens: z.array(z.string().min(1).max(256)).default([]),
+    requiredPrinciples: z.array(z.string().min(1).max(256)).default([]),
+    slots: z.array(PatternContractSlotSchema).default([]),
+    constraints: z.array(DesignConstraintSchema).default([]),
+  })
+  .strict();
+
+export type PatternContractFile = z.infer<typeof PatternContractSchema>;
 
 export const RuleLanguageSchema = z.enum(["tsx", "jsx", "ts", "js", "css", "html", "vue"]);
 
