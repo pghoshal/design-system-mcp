@@ -378,7 +378,7 @@ Completed in the first Phase 4 slice above. Remaining hardening:
 - Implemented: semantic token validation beyond raw hex for raw length values, raw color functions, unknown CSS vars, primitive token warnings
 - Implemented: copy/voice validation rules for blame, hype, vague action labels, destructive hedging
 - Dependency/import guidance per component package
-- Rich relation inference: components ↔ tokens ↔ patterns ↔ principles ↔ validation rules
+- Implemented: deterministic relation inference from explicit entity-id references
 - Harness workflow docs: discover → recommend → fetch usage → validate composition → generate → validate UI → repair
 
 ### Future (not committed)

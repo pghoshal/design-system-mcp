@@ -32,7 +32,8 @@
       "uses_token": { "from": "component", "to": "token" },
       "follows_principle": { "from": "component", "to": "principle" },
       "composes": { "from": "pattern", "to": "component" },
-      "implements_pattern": { "from": "component", "to": "pattern" }
+      "implements_pattern": { "from": "component", "to": "pattern" },
+      "references": { "from": "*", "to": "*" }
     }
   }
 }

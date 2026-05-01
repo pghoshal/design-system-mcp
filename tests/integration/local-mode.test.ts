@@ -6,6 +6,7 @@ import { LocalSourceAdapter } from "../../src/source/local.js";
 import { SourceManager } from "../../src/source/manager.js";
 import { handler as describeHandler } from "../../src/tools/describe-schema.js";
 import { handler as getEntityHandler } from "../../src/tools/get-entity.js";
+import { handler as getRelatedHandler } from "../../src/tools/get-related.js";
 import { handler as getUsageHandler } from "../../src/tools/get-usage.js";
 import { handler as listHandler } from "../../src/tools/list-entities.js";
 import { handler as recommendCompositionHandler } from "../../src/tools/recommend-composition.js";
@@ -172,6 +173,31 @@ describe("Phase 1 — local mode integration", () => {
       );
       const ids = (r.related ?? []).map((e) => e.id);
       expect(ids).toContain("principle:clarity");
+    });
+
+    it("infers references from explicit entity ids in documentation", async () => {
+      const r = await getRelatedHandler.handle(
+        { id: "convention:references", relation: "references", direction: "out", limit: 10 },
+        ctx(),
+      );
+      expect(r.related.map((rel) => rel.entity.id).sort()).toEqual([
+        "component:button",
+        "token:color.action.primary",
+      ]);
+    });
+
+    it("does not infer references from overlapping or partial ids", async () => {
+      const overlapping = await getRelatedHandler.handle(
+        { id: "component:button-group", relation: "references", direction: "out", limit: 10 },
+        ctx(),
+      );
+      expect(overlapping.related).toEqual([]);
+
+      const partial = await getRelatedHandler.handle(
+        { id: "convention:non-references", relation: "references", direction: "out", limit: 10 },
+        ctx(),
+      );
+      expect(partial.related).toEqual([]);
     });
 
     it("returns component metadata with props and examples", async () => {

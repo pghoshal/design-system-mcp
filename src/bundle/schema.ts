@@ -76,6 +76,11 @@ export const DEFAULT_SCHEMA = SchemaDefinitionSchema.parse({
       to: "pattern",
       description: "Component is suitable for the pattern",
     },
+    references: {
+      from: "*",
+      to: "*",
+      description: "Entity text explicitly references another entity id",
+    },
   },
 });
 

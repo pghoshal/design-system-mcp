@@ -44,8 +44,12 @@ export interface Relation {
 export class RelationsIndex {
   readonly #out = new Map<string, Relation[]>();
   readonly #in = new Map<string, Relation[]>();
+  readonly #keys = new Set<string>();
 
   add(rel: Relation): void {
+    const key = `${rel.from}\0${rel.type}\0${rel.to}`;
+    if (this.#keys.has(key)) return;
+    this.#keys.add(key);
     this.#getOrInit(this.#out, rel.from).push(rel);
     this.#getOrInit(this.#in, rel.to).push(rel);
   }

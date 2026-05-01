@@ -1,0 +1,23 @@
+{
+  "id": "component:button-group",
+  "type": "component",
+  "name": "ButtonGroup",
+  "summary": "Groups related actions without referencing the standalone action trigger.",
+  "package": "@acme/ui",
+  "importPath": "@acme/ui/button-group",
+  "status": "stable",
+  "tags": ["action", "layout"],
+  "props": [],
+  "examples": [
+    {
+      "name": "Grouped actions",
+      "language": "tsx",
+      "code": "import { ButtonGroup } from \"@acme/ui/button-group\";\n\n<ButtonGroup aria-label=\"Actions\" />"
+    }
+  ],
+  "constraints": [],
+  "tokens": [],
+  "principles": [],
+  "patterns": [],
+  "related": []
+}

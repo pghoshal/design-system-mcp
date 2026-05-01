@@ -65,6 +65,11 @@ export async function buildBundle(opts: BuildBundleOptions): Promise<Bundle> {
       relations.add({ from: ent.id, to: target, type: relationTypeFor(ent, target) });
     }
   }
+  for (const ent of entityMap.values()) {
+    for (const target of inferReferencedEntityIds(ent, entityMap)) {
+      relations.add({ from: ent.id, to: target, type: "references" });
+    }
+  }
 
   const searchIndex = buildSearchIndex(entityMap, manifest.schema);
 
@@ -116,6 +121,56 @@ function relationTypeFor(ent: Entity, target: string): string {
   if (data.principles?.includes(target)) return "follows_principle";
   if (data.patterns?.includes(target)) return "implements_pattern";
   return "related";
+}
+
+function inferReferencedEntityIds(ent: Entity, entityMap: ReadonlyMap<string, Entity>): string[] {
+  const text = entityReferenceText(ent);
+  if (!text) return [];
+
+  const out: string[] = [];
+  for (const id of entityMap.keys()) {
+    if (id === ent.id) continue;
+    if (containsEntityId(text, id)) out.push(id);
+  }
+  return out;
+}
+
+function entityReferenceText(ent: Entity): string {
+  const chunks = [ent.summary, ent.tags.join(" ")];
+  const data = ent.data;
+  for (const key of ["title", "name", "body"] as const) {
+    const value = data[key];
+    if (typeof value === "string") chunks.push(value);
+  }
+  collectArrayText(data.examples, chunks);
+  collectArrayText(data.constraints, chunks);
+  collectArrayText(data.props, chunks);
+  return chunks.join("\n");
+}
+
+function containsEntityId(text: string, id: string): boolean {
+  const escaped = escapeRegExp(id);
+  const re = new RegExp(`(^|[^A-Za-z0-9:._-])${escaped}($|[^A-Za-z0-9:._-])`);
+  return re.test(text);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function collectArrayText(value: unknown, chunks: string[]): void {
+  if (!Array.isArray(value)) return;
+  for (const item of value) {
+    if (typeof item === "string") {
+      chunks.push(item);
+      continue;
+    }
+    if (!item || typeof item !== "object") continue;
+    for (const nested of Object.values(item as Record<string, unknown>)) {
+      if (typeof nested === "string") chunks.push(nested);
+      if (Array.isArray(nested)) chunks.push(nested.filter((v) => typeof v === "string").join(" "));
+    }
+  }
 }
 
 async function tryGetGitSha(repoPath: string, logger: Logger): Promise<string | null> {

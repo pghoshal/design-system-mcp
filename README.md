@@ -210,6 +210,8 @@ Pattern docs can also include a machine-checkable `contract` in frontmatter. `va
 
 MDX files are supported in `docs/principles`, `docs/patterns`, and `docs/conventions`. The loader keeps frontmatter and prose searchable while stripping imports, exports, and component-only JSX from the indexed body.
 
+Docs and metadata may also reference entity ids directly, such as `component:button` or `token:color.action.primary`. The bundle infers deterministic `references` relations from those explicit ids, so `get_related` can walk the graph even when frontmatter did not include a manual `related` entry.
+
 ```yaml
 contract:
   requiredComponents:
