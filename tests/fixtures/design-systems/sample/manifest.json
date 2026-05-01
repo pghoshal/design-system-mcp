@@ -22,6 +22,10 @@
       "component": {
         "description": "UI component metadata",
         "searchable": ["name", "summary", "body", "tags"]
+      },
+      "convention": {
+        "description": "Implementation convention",
+        "searchable": ["title", "summary", "body", "tags"]
       }
     },
     "relations": {

@@ -53,7 +53,7 @@ describe("Phase 1 — local mode integration", () => {
     it("returns schema with declared types", async () => {
       const r = await describeHandler.handle({}, ctx());
       expect(Object.keys(r.types).sort()).toEqual(
-        ["component", "pattern", "principle", "token", "voice"].sort(),
+        ["component", "convention", "pattern", "principle", "token", "voice"].sort(),
       );
       expect(r.totalEntities).toBeGreaterThan(20);
       expect(r.bundleVersion).toMatch(/^.+-\d{4}-/);
@@ -93,6 +93,14 @@ describe("Phase 1 — local mode integration", () => {
       const r2 = await searchHandler.handle(args, ctx());
       expect(r1).toEqual(r2);
     });
+
+    it("indexes MDX documentation without JSX noise", async () => {
+      const r = await searchHandler.handle(
+        { query: "Save billing address", type: "convention", limit: 5, offset: 0 },
+        ctx(),
+      );
+      expect(r.hits[0]?.id).toBe("convention:forms");
+    });
   });
 
   describe("get_entity", () => {
@@ -126,6 +134,29 @@ describe("Phase 1 — local mode integration", () => {
         requiredComponents: ["component:button"],
         requiredTokens: ["token:color.action.danger"],
       });
+    });
+
+    it("returns normalized MDX documentation bodies", async () => {
+      const r = await getEntityHandler.handle(
+        { id: "convention:forms", resolve_relations: true },
+        ctx(),
+      );
+      expect(r.entity.source.path).toBe("docs/conventions/forms.mdx");
+      expect(r.entity.data.body).toContain("Keep labels visible.");
+      expect(r.entity.data.body).not.toContain("import ");
+      expect(r.entity.data.body).not.toContain("DoDont");
+      expect(r.entity.data.body).not.toContain("metadata");
+      expect(r.entity.data.body).not.toContain("design-systems");
+      expect(r.entity.data.body).not.toContain("<DoDont");
+      expect((r.related ?? []).map((e) => e.id)).toContain("principle:clarity");
+      expect((r.related ?? []).map((e) => e.id)).toContain("component:button");
+    });
+
+    it("does not load prompt MDX files", async () => {
+      expect(manager.current().prompts.map((prompt) => prompt.name)).toEqual([
+        "build_with_design_system",
+      ]);
+      expect(manager.current().entities.has("prompt:ignored_mdx_prompt")).toBe(false);
     });
 
     it("throws not_found on unknown id", async () => {

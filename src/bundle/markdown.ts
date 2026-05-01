@@ -30,7 +30,7 @@ export async function loadMarkdown(repoPath: string, logger: Logger): Promise<En
   for (const src of MD_SOURCES) {
     const dirAbs = path.join(repoPath, src.dir);
     if (!(await dirExists(dirAbs))) continue;
-    const files = await listMarkdownFiles(dirAbs);
+    const files = await listDocFiles(dirAbs);
     for (const file of files) {
       const ent = await readMdEntity(file, repoPath, src.defaultType, logger);
       if (ent) entities.push(ent);
@@ -56,6 +56,7 @@ async function readMdEntity(
 ): Promise<Entity | null> {
   const raw = await fs.readFile(filePath, "utf8");
   const { data, content } = matter(raw);
+  const body = normalizeMarkdownBody(content, path.extname(filePath) === ".mdx");
 
   const fmResult = FrontmatterSchema.safeParse(data ?? {});
   const fm = fmResult.success ? fmResult.data : { tags: [] };
@@ -67,9 +68,9 @@ async function readMdEntity(
   const type = (fm.type as string | undefined) ?? defaultType;
   const id = (fm.id as string | undefined) ?? `${type}:${slug}`;
   const title = (fm.title as string | undefined) ?? humanizeSlug(slug);
-  const summary = (fm.summary as string | undefined) ?? deriveSummary(content) ?? title;
+  const summary = (fm.summary as string | undefined) ?? deriveSummary(body) ?? title;
   const tags = Array.isArray(fm.tags) ? fm.tags : [];
-  const dataRecord: Record<string, unknown> = { title, body: content.trim() };
+  const dataRecord: Record<string, unknown> = { title, body };
 
   if (type === "pattern" && fm.contract !== undefined) {
     const contractResult = PatternContractSchema.safeParse(fm.contract);
@@ -101,7 +102,7 @@ export async function loadPrompts(
   const dir = path.join(repoPath, "prompts");
   if (!(await dirExists(dir))) return { prompts: [], entities: [] };
 
-  const files = await listMarkdownFiles(dir);
+  const files = await listPromptFiles(dir);
   const prompts: PromptTemplate[] = [];
   const entities: Entity[] = [];
 
@@ -160,18 +161,89 @@ function humanizeSlug(slug: string): string {
     .trim();
 }
 
-async function listMarkdownFiles(dir: string): Promise<string[]> {
+async function listDocFiles(dir: string): Promise<string[]> {
   const out: string[] = [];
   const entries = await fs.readdir(dir, { withFileTypes: true });
   for (const ent of entries) {
     const full = path.join(dir, ent.name);
     if (ent.isDirectory()) {
-      out.push(...(await listMarkdownFiles(full)));
-    } else if (ent.isFile() && (ent.name.endsWith(".md") || ent.name.endsWith(".prompt.md"))) {
+      out.push(...(await listDocFiles(full)));
+    } else if (
+      ent.isFile() &&
+      (ent.name.endsWith(".md") || ent.name.endsWith(".mdx") || ent.name.endsWith(".prompt.md"))
+    ) {
       out.push(full);
     }
   }
   return out;
+}
+
+async function listPromptFiles(dir: string): Promise<string[]> {
+  const out: string[] = [];
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  for (const ent of entries) {
+    const full = path.join(dir, ent.name);
+    if (ent.isDirectory()) {
+      out.push(...(await listPromptFiles(full)));
+    } else if (ent.isFile() && ent.name.endsWith(".prompt.md")) {
+      out.push(full);
+    }
+  }
+  return out;
+}
+
+function normalizeMarkdownBody(content: string, isMdx: boolean): string {
+  const trimmed = content.trim();
+  if (!isMdx) return trimmed;
+
+  return stripMdxJsBlocks(trimmed)
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+    .replace(/<([A-Z][A-Za-z0-9.]*)\b[^>]*>[\s\S]*?<\/\1>/g, "")
+    .replace(/<([A-Z][A-Za-z0-9.]*)\b[^>]*\/>/g, "")
+    .trim();
+}
+
+function stripMdxJsBlocks(content: string): string {
+  const out: string[] = [];
+  const lines = content.split("\n");
+  let skipping = false;
+  let depth = 0;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!skipping && (trimmed.startsWith("import ") || trimmed.startsWith("export "))) {
+      const delta = bracketDelta(line);
+      if (delta > 0 || trimmed.endsWith(",")) {
+        skipping = true;
+        depth = delta;
+      }
+      continue;
+    }
+
+    if (skipping) {
+      depth += bracketDelta(line);
+      if (depth <= 0 && !trimmed.endsWith(",")) {
+        skipping = false;
+        depth = 0;
+      }
+      continue;
+    }
+
+    if (/^<[A-Z][^>]*\/?>$/.test(trimmed)) continue;
+    if (/^<\/[A-Z][^>]*>$/.test(trimmed)) continue;
+    out.push(line);
+  }
+
+  return out.join("\n");
+}
+
+function bracketDelta(line: string): number {
+  let delta = 0;
+  for (const char of line) {
+    if (char === "{" || char === "(" || char === "[") delta++;
+    if (char === "}" || char === ")" || char === "]") delta--;
+  }
+  return delta;
 }
 
 async function dirExists(p: string): Promise<boolean> {

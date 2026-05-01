@@ -23,7 +23,7 @@ Implemented:
 - Streamable HTTP transport for hosted use
 - In-memory bundle and MiniSearch index
 - Style Dictionary token loading
-- Markdown content loading
+- Markdown and MDX content loading
 - Prompt template loading
 - JSON regex validation rules
 - Component metadata ingestion from `components/*/component.json`
@@ -36,7 +36,6 @@ Implemented:
 
 Not implemented yet:
 
-- MDX documentation parser
 - MCP resources and prompt registration beyond loaded prompt data
 - Production hardening docs and rollout playbooks
 
@@ -126,6 +125,8 @@ design-system/
       clarity.md
     patterns/
       confirmation-dialog.md
+    conventions/
+      forms.mdx
     voice-and-tone.md
   prompts/
     build_with_design_system.prompt.md
@@ -189,7 +190,7 @@ Tokens use DTCG-style JSON and are resolved through Style Dictionary.
 
 ### Markdown Docs
 
-Docs use YAML frontmatter plus Markdown body:
+Docs use YAML frontmatter plus Markdown or MDX body:
 
 ```markdown
 ---
@@ -206,6 +207,8 @@ Use plain language and obvious affordances.
 ```
 
 Pattern docs can also include a machine-checkable `contract` in frontmatter. `validate_composition` enforces this before code generation.
+
+MDX files are supported in `docs/principles`, `docs/patterns`, and `docs/conventions`. The loader keeps frontmatter and prose searchable while stripping imports, exports, and component-only JSX from the indexed body.
 
 ```yaml
 contract:

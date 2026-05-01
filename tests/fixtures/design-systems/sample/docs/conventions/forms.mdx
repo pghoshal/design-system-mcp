@@ -1,0 +1,29 @@
+---
+id: convention:forms
+type: convention
+title: Form Conventions
+summary: Forms should keep labels visible and actions specific.
+tags: [forms, copy, accessibility]
+related: [principle:clarity, component:button]
+---
+
+import {
+  DoDont,
+  ExampleGrid,
+} from "../components/DoDont";
+
+export const metadata = {
+  owner: "design-systems",
+  status: "stable",
+};
+
+# Form Conventions
+
+Keep labels visible. Place helper text below the field it explains.
+
+<DoDont
+  doText="Use Save billing address"
+  dontText="Use Submit"
+/>
+
+Use action labels that name the object, such as "Save billing address".

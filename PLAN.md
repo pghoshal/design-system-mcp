@@ -372,7 +372,7 @@ Completed in the first Phase 4 slice above. Remaining hardening:
 ### Phase 6 — Enterprise design consistency
 - Pattern contract schema + enforcement in `validate_composition`
 - Implemented: TypeScript component parser for `.tsx` / `.jsx` public `*Props` APIs
-- MDX documentation parser
+- Implemented: MDX documentation parser for searchable docs and conventions
 - Implemented: Storybook CSF story parser for examples and variants
 - Implemented: accessibility validation rules for image alt text, accessible names, labels, tabindex, autofocus
 - Implemented: semantic token validation beyond raw hex for raw length values, raw color functions, unknown CSS vars, primitive token warnings
