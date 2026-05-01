@@ -370,11 +370,12 @@ There is now a CLI path for invoking `validate_ui` outside MCP:
 - ✅ missing pattern contracts (`pattern-contract-missing`)
 - ✅ missing pattern-contract targets (`pattern-contract-target-missing`)
 - ✅ stale component replacement targets (`component-replacement-target-missing`)
+- ✅ example syntax sanity for `ts` / `tsx` / `js` / `jsx` usage examples (`component-example-syntax-invalid`)
 - 🟡 invalid token references — Style Dictionary throws on broken refs (`brokenReferences: "throw"` in `src/bundle/tokens.ts:42`); not surfaced through `inspect_coverage` separately
-- ❌ examples-compile sanity (no parser / type-checker on example code blocks)
+- 🟡 examples compile sanity is parser-backed syntax validation, not full dependency-aware type-checking
 - 🟡 orphan patterns beyond missing contracts are not separately ranked
 
-**Status:** structural, metadata-completeness, contract-target, and component-replacement coverage is good. Deeper checks (example compile and broader graph ranking) are not.
+**Status:** structural, metadata-completeness, contract-target, component-replacement, and example syntax coverage is good. Deeper checks (dependency-aware example type-checking and broader graph ranking) are not.
 
 ---
 
@@ -502,7 +503,7 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 | 16 | Component dependency / import guidance | ✅ schema'd; surfaced via `get_usage` |
 | 17 | Deprecation and migration | ✅ component chains + migration examples + prop/token replacements |
 | 18 | CI / PR validation mode | ✅ JSON/SARIF validate_ui + composition batch CLI |
-| 19 | Bundle quality checks | 🟡 structural + metadata + orphan/contract coverage; no example compile / stale replacement |
+| 19 | Bundle quality checks | 🟡 structural + metadata + orphan/contract + example syntax coverage; no dependency-aware example type-check / broader graph ranking |
 | 20 | Framework adapters | 🟡 language flag covers tsx/jsx/ts/js/css/html/vue (no React Native; no per-framework AST) |
 | 21 | AST-based validation rules | ✅ JSX prop value detector; className/token AST rules remain future depth |
 | 22 | Design-system coverage report | ✅ component + relation + contract + replacement + token usage coverage |
@@ -529,7 +530,7 @@ For each item that's worth promoting from 🟡 to ✅, the cheapest path is:
 If you want any of these landed, the cheapest 5 in priority order would be:
 
 1. **#5 Semantic token category enforcement** — detect color tokens in spacing/layout slots and spacing tokens in color slots.
-2. **#19 Bundle quality checks** — add example compile sanity checks.
+2. **#19 Bundle quality checks** — add dependency-aware example type-checking and broader graph ranking.
 3. **#23 Strict schema specs** — add token entity and platform-mapping schema depth.
 
 Each is a discrete slice that fits a TDD-RED→GREEN→Critic cycle.

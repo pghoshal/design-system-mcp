@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Bundle, Entity } from "../bundle/types.js";
+import type { Bundle, Entity, UsageExample } from "../bundle/types.js";
 import type { ToolHandler } from "../server/types.js";
 
 const REQUIRED_TYPES = ["token", "component", "pattern", "principle", "voice"] as const;
@@ -37,7 +37,7 @@ export const handler: ToolHandler<typeof InspectCoverageInput, typeof InspectCov
     const issues = [
       ...requiredTypeIssues(bundle, counts),
       ...emptyDeclaredTypeIssues(bundle, counts),
-      ...componentIssues(bundle),
+      ...(await componentIssues(bundle)),
       ...patternIssues(bundle),
       ...tokenIssues(bundle),
       ...relationIssues(bundle),
@@ -102,7 +102,7 @@ function emptyDeclaredTypeIssues(bundle: Bundle, counts: Record<string, number>)
   return issues;
 }
 
-function componentIssues(bundle: Bundle): CoverageIssue[] {
+async function componentIssues(bundle: Bundle): Promise<CoverageIssue[]> {
   const issues: CoverageIssue[] = [];
   for (const entity of bundle.entities.values()) {
     if (entity.type !== "component") continue;
@@ -131,6 +131,8 @@ function componentIssues(bundle: Bundle): CoverageIssue[] {
       issues.push(
         issue("component-examples-empty", "warning", entity, "Component has no usage examples."),
       );
+    } else {
+      issues.push(...(await exampleSyntaxIssues(entity, data.examples as UsageExample[])));
     }
     if (!Array.isArray(data.constraints) || data.constraints.length === 0) {
       issues.push(
@@ -178,6 +180,51 @@ function componentIssues(bundle: Bundle): CoverageIssue[] {
     }
   }
   return issues;
+}
+
+async function exampleSyntaxIssues(
+  entity: Entity,
+  examples: UsageExample[],
+): Promise<CoverageIssue[]> {
+  const issues: CoverageIssue[] = [];
+  const ts = await import("typescript");
+
+  for (const example of examples) {
+    if (!["ts", "tsx", "js", "jsx"].includes(example.language)) continue;
+    const sourceFile = ts.createSourceFile(
+      `example.${example.language}`,
+      example.code,
+      ts.ScriptTarget.Latest,
+      true,
+      example.language === "tsx" || example.language === "jsx"
+        ? ts.ScriptKind.TSX
+        : ts.ScriptKind.TS,
+    );
+    const diagnostics = (sourceFile as SourceFileWithParseDiagnostics).parseDiagnostics ?? [];
+    if (diagnostics.length === 0) continue;
+    const first = diagnostics[0];
+    issues.push({
+      id: "component-example-syntax-invalid",
+      severity: "error",
+      entityId: entity.id,
+      type: entity.type,
+      message: `${entity.id} example '${example.name}' has invalid ${example.language} syntax: ${formatDiagnosticMessage(first?.messageText)}.`,
+    });
+  }
+
+  return issues;
+}
+
+type SourceFileWithParseDiagnostics = {
+  parseDiagnostics?: readonly { messageText?: unknown }[];
+};
+
+function formatDiagnosticMessage(message: unknown): string {
+  if (typeof message === "string" && message.length > 0) return message;
+  if (message && typeof message === "object" && "messageText" in message) {
+    return formatDiagnosticMessage((message as { messageText?: unknown }).messageText);
+  }
+  return "parse error";
 }
 
 function patternIssues(bundle: Bundle): CoverageIssue[] {

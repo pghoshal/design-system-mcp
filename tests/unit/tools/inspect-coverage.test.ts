@@ -514,4 +514,120 @@ describe("inspect_coverage", () => {
       }),
     );
   });
+
+  it("reports component examples with invalid TypeScript or JSX syntax", async () => {
+    const brokenExamples = [
+      { name: "Broken TS", language: "ts", code: "const answer: number =" },
+      { name: "Broken TSX", language: "tsx", code: "<Button>" },
+      { name: "Broken JS", language: "js", code: "const answer =" },
+      { name: "Broken JSX", language: "jsx", code: "<Button>" },
+    ];
+    const bundle = {
+      version: "test",
+      schema: {
+        types: {
+          token: { searchable: ["summary"] },
+          component: { searchable: ["summary"] },
+          pattern: { searchable: ["summary"] },
+          principle: { searchable: ["summary"] },
+          voice: { searchable: ["summary"] },
+        },
+      },
+      entities: new Map([
+        [
+          "token:color.action.primary",
+          {
+            id: "token:color.action.primary",
+            type: "token",
+            summary: "Primary",
+            tags: [],
+            data: {},
+            source: { path: "tokens/semantic.tokens.json" },
+          },
+        ],
+        [
+          "principle:clarity",
+          {
+            id: "principle:clarity",
+            type: "principle",
+            summary: "Clarity",
+            tags: [],
+            data: {},
+            source: { path: "docs/principles/clarity.md" },
+          },
+        ],
+        [
+          "voice:default",
+          {
+            id: "voice:default",
+            type: "voice",
+            summary: "Voice",
+            tags: [],
+            data: {},
+            source: { path: "docs/voice-and-tone.md" },
+          },
+        ],
+        [
+          "component:button",
+          {
+            id: "component:button",
+            type: "component",
+            summary: "Button",
+            tags: [],
+            data: {
+              importPath: "@acme/ui/button",
+              dependencies: [{ package: "@acme/ui", type: "runtime" }],
+              props: [{ name: "label", type: "string", required: false }],
+              constraints: [{ id: "button-label", severity: "error", message: "Use labels." }],
+              examples: brokenExamples,
+              principles: ["principle:clarity"],
+              patterns: ["pattern:confirmation-dialog"],
+              tokens: ["token:color.action.primary"],
+            },
+            source: { path: "components/Button/component.json" },
+          },
+        ],
+        [
+          "pattern:confirmation-dialog",
+          {
+            id: "pattern:confirmation-dialog",
+            type: "pattern",
+            summary: "Pattern",
+            tags: [],
+            data: { contract: { requiredTokens: ["token:color.action.primary"] } },
+            source: { path: "docs/patterns/confirmation-dialog.md" },
+          },
+        ],
+      ]),
+    };
+    const ctx = {
+      source: { current: () => bundle },
+      cache: new LayeredCache(),
+      logger,
+      requestId: "test",
+    };
+
+    const r = await handler.handle({ include_warnings: true }, ctx as never);
+
+    expect(r.ok).toBe(false);
+    for (const example of brokenExamples) {
+      expect(r.issues).toContainEqual(
+        expect.objectContaining({
+          id: "component-example-syntax-invalid",
+          severity: "error",
+          entityId: "component:button",
+          message: expect.stringContaining(example.name),
+        }),
+      );
+    }
+    expect(r.issues.filter((issue) => issue.id === "component-example-syntax-invalid")).toEqual(
+      brokenExamples.map(() =>
+        expect.objectContaining({
+          id: "component-example-syntax-invalid",
+          severity: "error",
+          entityId: "component:button",
+        }),
+      ),
+    );
+  });
 });
