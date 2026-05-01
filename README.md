@@ -1,3 +1,5 @@
+![Design System MCP social preview](docs/social-preview.png)
+
 # Design System MCP Server
 
 A single-instance [Model Context Protocol](https://modelcontextprotocol.io/) server that gives AI coding agents authoritative design-system context before they generate UI.
