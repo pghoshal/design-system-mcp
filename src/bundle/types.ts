@@ -101,6 +101,17 @@ export interface ComponentDependency {
   reason?: string | undefined;
 }
 
+export interface PlatformMapping {
+  platform: string;
+  framework?: string | undefined;
+  package?: string | undefined;
+  importPath?: string | undefined;
+  component?: string | undefined;
+  tokens: Record<string, string>;
+  props: Record<string, string | number | boolean>;
+  notes: string[];
+}
+
 export interface ImportGuidance {
   named: string[];
   default?: string | undefined;
@@ -137,6 +148,7 @@ export interface ComponentMetadata {
   importPath: string;
   dependencies: ComponentDependency[];
   importGuidance?: ImportGuidance | undefined;
+  platforms: PlatformMapping[];
   status: "stable" | "experimental" | "deprecated";
   replacedBy: string[];
   migration?: MigrationGuidance | undefined;

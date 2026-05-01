@@ -122,6 +122,50 @@ export const UsageExampleSchema = z.object({
   interactions: z.array(z.string().min(1).max(5_000)).optional(),
 });
 
+const TokenMetadataTypeSchema = z.enum([
+  "color",
+  "dimension",
+  "fontFamily",
+  "fontWeight",
+  "duration",
+  "cubicBezier",
+  "number",
+  "strokeStyle",
+  "border",
+  "transition",
+  "shadow",
+  "gradient",
+  "typography",
+]);
+
+const TokenValueSchema: z.ZodType<unknown> = z.unknown();
+
+export const TokenEntityDataSchema = z
+  .object({
+    name: z.string().min(1).max(256),
+    path: z.array(z.string().min(1).max(128)).min(1),
+    value: TokenValueSchema,
+    original: TokenValueSchema.optional(),
+    $type: z
+      .union([
+        TokenMetadataTypeSchema,
+        z
+          .string()
+          .min(1)
+          .max(64)
+          .regex(/^[a-z][a-zA-Z0-9-]*$/, "custom token type must be identifier-like"),
+      ])
+      .optional(),
+    deprecated: z.union([z.boolean(), z.string().min(1).max(1_000)]).optional(),
+    replacement: z
+      .string()
+      .min(1)
+      .max(256)
+      .regex(/^token:/, "token replacement id must start with token:")
+      .optional(),
+  })
+  .strict();
+
 export const MigrationSchema = z
   .object({
     steps: z.array(z.string().min(1).max(2_000)).default([]),
@@ -144,6 +188,52 @@ export const ImportGuidanceSchema = z
     default: z.string().min(1).max(128).optional(),
     namespace: z.string().min(1).max(128).optional(),
     sideEffects: z.array(z.string().min(1).max(256)).default([]),
+    notes: z.array(z.string().min(1).max(1_000)).default([]),
+  })
+  .strict();
+
+const IdentifierSchema = z
+  .string()
+  .min(1)
+  .max(64)
+  .regex(
+    /^[a-z][a-z0-9-]*$/i,
+    "identifier must start with a letter and contain only letters, numbers, and hyphens",
+  );
+
+const canonicalOrCustom = <T extends readonly [string, ...string[]]>(values: T) =>
+  z.union([z.enum(values), IdentifierSchema]);
+
+export const PlatformSchema = canonicalOrCustom(["web", "ios", "android", "react-native"]);
+export const FrameworkSchema = canonicalOrCustom([
+  "react",
+  "vue",
+  "angular",
+  "svelte",
+  "swiftui",
+  "uikit",
+  "android-view",
+  "jetpack-compose",
+  "react-native",
+]);
+
+export const PlatformMappingSchema = z
+  .object({
+    platform: PlatformSchema,
+    framework: FrameworkSchema.optional(),
+    package: z.string().min(1).max(128).optional(),
+    importPath: z.string().min(1).max(256).optional(),
+    component: z.string().min(1).max(128).optional(),
+    tokens: z
+      .record(
+        z
+          .string()
+          .min(1)
+          .max(256)
+          .regex(/^token:/),
+      )
+      .default({}),
+    props: z.record(z.union([z.string(), z.number(), z.boolean()])).default({}),
     notes: z.array(z.string().min(1).max(1_000)).default([]),
   })
   .strict();
@@ -186,6 +276,7 @@ export const ComponentMetadataSchema = z.object({
   importPath: z.string().min(1).max(256),
   dependencies: z.array(ComponentDependencySchema).default([]),
   importGuidance: ImportGuidanceSchema.optional(),
+  platforms: z.array(PlatformMappingSchema).default([]),
   status: z.enum(["stable", "experimental", "deprecated"]).default("stable"),
   replacedBy: z
     .array(

@@ -5,6 +5,7 @@ import matter from "gray-matter";
 import StyleDictionary from "style-dictionary";
 import type { Logger } from "../observability/logger.js";
 import { COMMUNITY_DOC_FILE_NAMES, isDocFileName } from "./markdown.js";
+import { TokenEntityDataSchema } from "./schema.js";
 import type { Entity } from "./types.js";
 
 export interface TokenLoadResult {
@@ -62,20 +63,22 @@ export async function loadTokens(repoPath: string, logger: Logger): Promise<Toke
         description ||
         `${tokenType ? `${tokenType} ` : ""}token ${tok.path.join(".")} = ${stringifyValue(rawValue)}`;
 
+      const data = TokenEntityDataSchema.parse({
+        name: tok.name,
+        path: tok.path,
+        value: rawValue,
+        original: tok.original?.$value ?? tok.original?.value,
+        $type: tokenType,
+        ...(deprecated !== undefined ? { deprecated } : {}),
+        ...(replacement !== undefined ? { replacement } : {}),
+      });
+
       entities.push({
         id,
         type: "token",
         summary,
         tags: deriveTokenTags(tok.path, tokenType),
-        data: {
-          name: tok.name,
-          path: tok.path,
-          value: rawValue,
-          original: tok.original?.$value ?? tok.original?.value,
-          $type: tokenType,
-          ...(deprecated !== undefined ? { deprecated } : {}),
-          ...(replacement !== undefined ? { replacement } : {}),
-        },
+        data,
         source: {
           path:
             markdownTokenSources.sourcePathByFile.get(tok.filePath) ??
