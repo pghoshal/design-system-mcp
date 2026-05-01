@@ -233,7 +233,11 @@ Use plain language and obvious affordances.
 
 Pattern docs can also include a machine-checkable `contract` in frontmatter. `validate_composition` enforces this before code generation.
 
-MDX files are supported in `docs/principles`, `docs/patterns`, and `docs/conventions`. The loader keeps frontmatter and prose searchable while stripping imports, exports, and component-only JSX from the indexed body.
+MDX files are supported in `docs/principles`, `docs/patterns`, and `docs/conventions`. The loader keeps frontmatter and prose searchable while stripping imports, exports, and component-only JSX from the indexed body. It also extracts common handoff structure into `entity.data.structured` so agents do not need to parse prose themselves:
+
+- `<DoDont doText="..." dontText="..." />` pairs become `structured.do` and `structured.dont`.
+- `## Do`, `## Do not`, `## Accessibility`, and `## Migration` list sections become stable arrays.
+- `## Props` Markdown tables become `structured.propTables` with normalized prop rows.
 
 Community-published root docs are also supported for UX-to-dev handoff. Root files named `getdesign.md`, `design-system.md`, `design.md`, `styleguide.md`, or `guidelines.md` are loaded as `convention` entities by default; root Markdown/MDX files with frontmatter `id`, `type`, or `tokens` are loaded too. This makes public/community formats searchable without adding content-specific MCP tools.
 

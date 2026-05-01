@@ -184,6 +184,88 @@ describe("Phase 1 — local mode integration", () => {
       expect((r.related ?? []).map((e) => e.id)).toContain("component:button");
     });
 
+    it("returns structured Markdown handoff data from MDX docs", async () => {
+      const r = await getEntityHandler.handle(
+        { id: "convention:forms", resolve_relations: false },
+        ctx(),
+      );
+      expect(r.entity.data.structured).toMatchObject({
+        do: [
+          "Use Save billing address",
+          "Keep labels visible after the field has a value.",
+          "Place helper text below the field it explains.",
+        ],
+        dont: [
+          "Use Submit",
+          "Replace specific action labels with Submit.",
+          "Hide required-field state behind color alone.",
+        ],
+        accessibility: [
+          "Keep every input associated with a visible label.",
+          "Announce validation errors next to the field that caused them.",
+          "Preserve tab order from top to bottom.",
+        ],
+        migration: [
+          "Replace placeholder-only labels with persistent label text.",
+          "Replace generic submit actions with object-specific actions.",
+        ],
+        propTables: [
+          {
+            columns: ["Prop", "Type", "Required", "Default", "Description"],
+            rows: [
+              {
+                name: "label",
+                type: "string",
+                required: true,
+                default: "-",
+                description: "Visible field label.",
+              },
+              {
+                name: "helperText",
+                type: "string",
+                required: false,
+                default: "-",
+                description: "Extra guidance shown below the field.",
+              },
+              {
+                name: "size",
+                type: '"sm" | "md"',
+                required: false,
+                default: '"md"',
+                description: "Controls field density.",
+              },
+            ],
+          },
+          {
+            columns: ["Prop", "Type", "Required", "Default", "Description"],
+            rows: [
+              {
+                name: "errorText",
+                type: "string",
+                required: false,
+                default: "-",
+                description: "Validation message shown below the field.",
+              },
+            ],
+          },
+        ],
+      });
+      const structured = r.entity.data.structured as {
+        dont: string[];
+        do: string[];
+        propTables: Array<{ rows: Array<{ name: string }> }>;
+      };
+      expect(structured.do).not.toContain(
+        "This fenced example must stay out of structured handoff data.",
+      );
+      expect(structured.do).not.toContain("This fenced DoDont must stay out");
+      expect(structured.dont).not.toContain("This fenced DoDont must stay out");
+      expect(structured.do).not.toContain("This nested fenced item must stay out");
+      expect(structured.do).not.toContain("This nested fenced DoDont must stay out");
+      expect(structured.dont).not.toContain("This nested fenced DoDont must stay out");
+      expect(structured.propTables[0]?.rows.map((row) => row.name)).not.toContain("ghost");
+    });
+
     it("returns community root markdown docs with resolved relations", async () => {
       const r = await getEntityHandler.handle(
         { id: "convention:getdesign", resolve_relations: true },

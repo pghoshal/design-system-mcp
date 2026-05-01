@@ -26,4 +26,64 @@ Keep labels visible. Place helper text below the field it explains.
   dontText="Use Submit"
 />
 
+```mdx
+<DoDont
+  doText="This fenced DoDont must stay out"
+  dontText="This fenced DoDont must stay out"
+/>
+```
+
+````mdx
+```mdx
+- This nested fenced item must stay out
+<DoDont doText="This nested fenced DoDont must stay out" dontText="This nested fenced DoDont must stay out" />
+```
+````
+
 Use action labels that name the object, such as "Save billing address".
+
+## Do
+
+- Keep labels visible after the field has a value.
+- Place helper text below the field it explains.
+
+```markdown
+- This fenced example must stay out of structured handoff data.
+```
+
+## Do not
+
+- Replace specific action labels with Submit.
+- Hide required-field state behind color alone.
+
+## Accessibility
+
+- Keep every input associated with a visible label.
+- Announce validation errors next to the field that caused them.
+
+### Keyboard
+
+- Preserve tab order from top to bottom.
+
+## Migration
+
+- Replace placeholder-only labels with persistent label text.
+- Replace generic submit actions with object-specific actions.
+
+## Props
+
+| Prop | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| label | string | yes | - | Visible field label. |
+| helperText | string | no | - | Extra guidance shown below the field. |
+| size | "sm" \| "md" | no | "md" | Controls field density. |
+
+Prop | Type | Required | Default | Description
+--- | --- | --- | --- | ---
+errorText | string | no | - | Validation message shown below the field.
+
+```markdown
+| Prop | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| ghost | string | yes | - | This fenced table must stay out. |
+```

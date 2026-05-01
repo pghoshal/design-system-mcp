@@ -41,19 +41,20 @@ Legend: ✅ implemented · 🟡 partial · ❌ missing
 
 ---
 
-## 3. MDX Documentation Parser — 🟡 partial
+## 3. MDX Documentation Parser — ✅ implemented
 
-`src/bundle/markdown.ts` (314 LOC) handles `.md` and `.mdx`. MDX-specific behavior:
+`src/bundle/markdown.ts` handles `.md` and `.mdx`. MDX-specific behavior:
 
 - ✅ strips imports / exports / component-only JSX from indexed body so search isn't polluted
 - ✅ keeps frontmatter + prose searchable
 - ✅ extracts machine-readable frontmatter `tokens:` blocks (DTCG-normalized) — see `src/bundle/tokens.ts:99-135` (`extractMarkdownTokenSources`)
-- ❌ structured do/don't extraction
-- ❌ structured prop tables (only prose)
-- ❌ structured accessibility notes
-- ❌ structured migration sections
+- ✅ extracts MDX `<DoDont doText="..." dontText="..." />` into `entity.data.structured.do` / `dont`
+- ✅ extracts Markdown `## Do` / `## Do not` lists
+- ✅ extracts `## Accessibility` notes
+- ✅ extracts `## Migration` notes
+- ✅ extracts `## Props` Markdown tables into normalized prop rows
 
-**Status:** body-text indexing is solid, including MDX. No structured extraction of `<DoDont>`, `<PropTable>`, etc.
+**Status:** body-text indexing is solid, including MDX, and common UX-to-dev handoff structures are promoted into machine-readable entity data.
 
 ---
 
@@ -482,7 +483,7 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 |---|---|---|
 | 1 | Component API parser | ✅ props + variants + defaults + @deprecated + controlled hints |
 | 2 | Storybook parser | ✅ examples + args + controls + play notes + states |
-| 3 | MDX documentation parser | 🟡 partial (search-clean body; no structured do/don't / tables) |
+| 3 | MDX documentation parser | ✅ search-clean body + structured do/don't / accessibility / migration / props |
 | 4 | Accessibility rule engine | ✅ 7 rules (ARIA roles included; no dialog focus / contrast) |
 | 5 | Semantic token validator | ✅ 5 rules (deprecated tokens included; no category enforcement / per-component allowlists) |
 | 6 | Composition validator v2 | 🟡 partial (structural; no ordering / state / platform) |
@@ -505,7 +506,7 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 | 23 | Strict schema specs | 🟡 strong for component / pattern / rule; weak for token / migration / platform |
 | 24 | Harness-enforced modes | 🟡 `design://workflow` published; hard blocking remains client-side |
 
-**Tally:** 15 ✅ · 9 🟡 · 0 ❌ (out of 24).
+**Tally:** 16 ✅ · 8 🟡 · 0 ❌ (out of 24).
 
 The remaining major-gap set has no fully missing server-side item. The hard parts left are depth expansions:
 
@@ -527,8 +528,8 @@ For each item that's worth promoting from 🟡 to ✅, the cheapest path is:
 
 If you want any of these landed, the cheapest 5 in priority order would be:
 
-1. **#3 MDX structured extraction** — promote do/don't, prop tables, accessibility notes, and migration sections into `Entity.data`.
-2. **#13 Structured repair suggestions** — extend `replaceWith` beyond autofocus and add before/after snippets.
-3. **#21 AST detector kind** — biggest engineering investment of the bunch but unblocks deeper validation of token-usage-in-JSX, controlled-vs-uncontrolled, etc.
+1. **#13 Structured repair suggestions** — extend `replaceWith` beyond autofocus and add before/after snippets.
+2. **#5 Semantic token category enforcement** — detect color tokens in spacing/layout slots and spacing tokens in color slots.
+3. **#6 Composition ordering/state/platform constraints** — add machine-checkable contract fields before enforcing them.
 
 Each is a discrete slice that fits a TDD-RED→GREEN→Critic cycle.
