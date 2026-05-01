@@ -162,7 +162,7 @@ export const handler: ToolHandler<
       ...groups.principles.map((entity) => entity.id),
       ...groups.tokens.map((entity) => entity.id),
     ]);
-    fillAlternatives(bundle.entities, selected, alternatives, args.limit);
+    fillAlternativesFromHits(hits, bundle.entities, selected, alternatives, provenance, args.limit);
 
     return {
       intent: args.intent,
@@ -214,7 +214,8 @@ function provenanceFor(
   };
 }
 
-function fillAlternatives(
+function fillAlternativesFromHits(
+  hits: ReadonlyArray<{ id?: unknown }>,
   entities: ReadonlyMap<string, Entity>,
   selected: ReadonlySet<string>,
   alternatives: {
@@ -223,13 +224,13 @@ function fillAlternatives(
     principles: ReturnType<typeof summarize>[];
     tokens: ReturnType<typeof summarize>[];
   },
+  provenance: Map<string, z.infer<typeof RecommendationProvenanceSchema>>,
   limit: number,
 ): void {
-  const candidates = [...entities.values()]
-    .filter((entity) => !selected.has(entity.id))
-    .sort((a, b) => statusRank(a) - statusRank(b) || a.id.localeCompare(b.id));
-
-  for (const entity of candidates) {
+  const alternativeIds = new Set<string>();
+  for (const hit of hits) {
+    const entity = entities.get(String(hit.id));
+    if (!entity || selected.has(entity.id) || alternativeIds.has(entity.id)) continue;
     if (entity.type === "component" && alternatives.components.length < limit) {
       alternatives.components.push(summarize(entity));
     } else if (entity.type === "pattern" && alternatives.patterns.length < limit) {
@@ -239,13 +240,10 @@ function fillAlternatives(
     } else if (entity.type === "token" && alternatives.tokens.length < limit) {
       alternatives.tokens.push(summarize(entity));
     }
+    alternativeIds.add(entity.id);
+    provenance.set(
+      entity.id,
+      provenanceFor(entity, ["Alternative matched the intent search query."]),
+    );
   }
-}
-
-function statusRank(entity: Entity): number {
-  const status = entity.data.status;
-  if (status === "stable") return 0;
-  if (status === "experimental") return 1;
-  if (status === "deprecated") return 2;
-  return 0;
 }

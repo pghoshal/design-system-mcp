@@ -86,12 +86,14 @@ const VALID_ARIA_ROLES = new Set([
 
 interface TagMatch {
   name: string;
-  attrs: Map<string, string | true>;
+  attrs: Map<string, AttrValue>;
   match: string;
   content: string;
   line: number;
   column: number;
 }
+
+type AttrValue = string | true | { kind: "expression"; value: string };
 
 interface DocumentScan {
   tags: TagMatch[];
@@ -233,7 +235,7 @@ function autofocusViolation(tag: TagMatch): Violation | null {
 }
 
 function validAriaRoleViolation(tag: TagMatch): Violation | null {
-  const value = attrValue(tag, "role");
+  const value = staticAttrValue(tag, "role");
   if (!value) return null;
   const roles = value
     .split(/\s+/)
@@ -285,13 +287,16 @@ function scanDocument(code: string): DocumentScan {
   return { tags, labelledIds };
 }
 
-function parseAttributes(source: string): Map<string, string | true> {
-  const attrs = new Map<string, string | true>();
+function parseAttributes(source: string): Map<string, AttrValue> {
+  const attrs = new Map<string, AttrValue>();
   const re = /([A-Za-z_:][\w:.-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|\{([^}]*)\}|([^\s"'=<>`]+)))?/g;
   let result = re.exec(source);
   while (result) {
     const name = result[1] ?? "";
-    const value = result[2] ?? result[3] ?? result[4] ?? result[5] ?? true;
+    const value =
+      result[4] !== undefined
+        ? ({ kind: "expression", value: result[4].trim() } satisfies AttrValue)
+        : (result[2] ?? result[3] ?? result[5] ?? true);
     attrs.set(name, typeof value === "string" ? value.trim() : value);
     result = re.exec(source);
   }
@@ -321,13 +326,35 @@ function hasInlineContent(tag: TagMatch): boolean {
 
 function hasNonEmptyAttr(tag: TagMatch, name: string): boolean {
   const value = tag.attrs.get(name);
-  return typeof value === "string" && value.trim().length > 0;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (isExpressionAttr(value)) return value.value.trim().length > 0;
+  return false;
 }
 
 function attrValue(tag: TagMatch, name: string): string | null {
+  return staticAttrValue(tag, name);
+}
+
+function staticAttrValue(tag: TagMatch, name: string): string | null {
   const value = tag.attrs.get(name);
-  if (typeof value !== "string") return null;
-  return value.trim().replace(/^["']|["']$/g, "");
+  if (typeof value === "string") return value.trim().replace(/^["']|["']$/g, "");
+  if (!isExpressionAttr(value)) return null;
+  const trimmed = value.value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'")) ||
+    (trimmed.startsWith("`") && trimmed.endsWith("`") && !trimmed.includes("${"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) return trimmed;
+  return null;
+}
+
+function isExpressionAttr(
+  value: AttrValue | undefined,
+): value is { kind: "expression"; value: string } {
+  return typeof value === "object" && value !== null && value.kind === "expression";
 }
 
 function lineStartOffsets(code: string): number[] {

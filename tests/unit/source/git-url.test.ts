@@ -12,11 +12,10 @@ describe("embedTokenIfHttps", () => {
     expect(u.pathname).toBe("/acme/design-system.git");
   });
 
-  it("embeds a PAT on http URLs (intentional — same auth model)", () => {
-    const out = embedTokenIfHttps("http://internal-git.local/x.git", "tok");
-    const u = new URL(out);
-    expect(u.username).toBe("x-access-token");
-    expect(u.password).toBe("tok");
+  it("does not embed a PAT on plain http URLs", () => {
+    expect(embedTokenIfHttps("http://internal-git.local/x.git", "tok")).toBe(
+      "http://internal-git.local/x.git",
+    );
   });
 
   it("returns the original URL unchanged when no token is supplied", () => {

@@ -156,7 +156,9 @@ function parseArgs(argv: string[]): CliOptions | { error: string } {
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--source") {
+    if (arg === "--") {
+      // pnpm forwards the script argument separator; ignore it.
+    } else if (arg === "--source") {
       sourcePath = readValue(argv, ++i, "--source");
     } else if (arg === "--language") {
       const raw = readValue(argv, ++i, "--language");

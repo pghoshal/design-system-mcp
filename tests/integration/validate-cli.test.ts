@@ -13,6 +13,7 @@ const REPO_ROOT = path.resolve(__dirname, "..", "..");
 const FIXTURE = path.resolve(__dirname, "..", "fixtures", "design-systems", "sample");
 const TSX_BIN = path.join(REPO_ROOT, "node_modules", ".bin", "tsx");
 const ENTRY = path.join(REPO_ROOT, "src", "validate-cli.ts");
+const PNPM_CLI = process.env.npm_execpath;
 
 let tmpDir: string;
 
@@ -41,6 +42,23 @@ describe("validate CLI", () => {
     const parsed = JSON.parse(stdout) as { ok: boolean; counts: { error: number } };
     expect(parsed.ok).toBe(true);
     expect(parsed.counts.error).toBe(0);
+  });
+
+  it("supports the documented pnpm validate -- --source invocation", async () => {
+    if (!PNPM_CLI) throw new Error("npm_execpath missing; run tests through pnpm");
+    const file = path.join(tmpDir, "clean.tsx");
+    await fs.writeFile(file, "const color = 'var(--color-action-primary)';\n", "utf8");
+
+    const { stdout } = await execFileAsync(
+      process.execPath,
+      [PNPM_CLI, "validate", "--", "--source", FIXTURE, "--format", "json", file],
+      { cwd: REPO_ROOT },
+    );
+
+    const jsonStart = stdout.indexOf("{");
+    expect(jsonStart).toBeGreaterThanOrEqual(0);
+    const parsed = JSON.parse(stdout.slice(jsonStart)) as { ok: boolean };
+    expect(parsed.ok).toBe(true);
   });
 
   it("exits 1 and includes violation provenance for error files", async () => {

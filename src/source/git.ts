@@ -128,7 +128,7 @@ export function embedTokenIfHttps(url: string, token: string | undefined): strin
   if (!token) return url;
   try {
     const u = new URL(url);
-    if (u.protocol === "https:" || u.protocol === "http:") {
+    if (u.protocol === "https:") {
       u.username = "x-access-token";
       u.password = token;
       return u.toString();

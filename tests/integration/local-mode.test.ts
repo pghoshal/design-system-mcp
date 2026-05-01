@@ -453,6 +453,14 @@ describe("Phase 1 — local mode integration", () => {
       expect(r.ok).toBe(false);
       expect(r.violations.some((v) => v.ruleId === "a11y-valid-aria-role")).toBe(true);
     });
+
+    it("does not flag dynamic ARIA role expressions", async () => {
+      const r = await validateUiHandler.handle(
+        { code: "<div role={role}>Open</div>", language: "tsx", rules: [] },
+        ctx(),
+      );
+      expect(r.violations.some((v) => v.ruleId === "a11y-valid-aria-role")).toBe(false);
+    });
   });
 
   describe("enterprise composition tools", () => {
@@ -622,6 +630,10 @@ describe("Phase 1 — local mode integration", () => {
       expect(r.alternatives.components.length).toBeGreaterThan(0);
       expect(r.alternatives.components.every((item) => item.id !== selectedComponent?.id)).toBe(
         true,
+      );
+      const alternative = r.alternatives.components[0];
+      expect(r.provenance.find((item) => item.entityId === alternative?.id)?.reasons).toContain(
+        "Alternative matched the intent search query.",
       );
     });
 
