@@ -379,6 +379,7 @@ Completed in the first Phase 4 slice above. Remaining hardening:
 - Implemented: copy/voice validation rules for blame, hype, vague action labels, destructive hedging
 - Dependency/import guidance per component package
 - Implemented: deterministic relation inference from explicit entity-id references
+- Implemented: schema/content coverage inspection for deterministic generation readiness
 - Harness workflow docs: discover → recommend → fetch usage → validate composition → generate → validate UI → repair
 
 ### Future (not committed)

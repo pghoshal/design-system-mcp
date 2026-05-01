@@ -8,6 +8,7 @@ import { handler as describeHandler } from "../../src/tools/describe-schema.js";
 import { handler as getEntityHandler } from "../../src/tools/get-entity.js";
 import { handler as getRelatedHandler } from "../../src/tools/get-related.js";
 import { handler as getUsageHandler } from "../../src/tools/get-usage.js";
+import { handler as inspectCoverageHandler } from "../../src/tools/inspect-coverage.js";
 import { handler as listHandler } from "../../src/tools/list-entities.js";
 import { handler as recommendCompositionHandler } from "../../src/tools/recommend-composition.js";
 import { handler as resolveHandler } from "../../src/tools/resolve-token.js";
@@ -310,6 +311,21 @@ describe("Phase 1 — local mode integration", () => {
   });
 
   describe("enterprise composition tools", () => {
+    it("inspect_coverage reports bundle readiness and warnings", async () => {
+      const r = await inspectCoverageHandler.handle({ include_warnings: true }, ctx());
+      expect(r.ok).toBe(true);
+      expect(r.counts.token).toBeGreaterThan(0);
+      expect(r.counts.component).toBeGreaterThan(0);
+      expect(r.issues.some((issue) => issue.id === "component-props-empty")).toBe(true);
+      expect(r.issues.every((issue) => issue.severity !== "error")).toBe(true);
+    });
+
+    it("inspect_coverage can return only errors", async () => {
+      const r = await inspectCoverageHandler.handle({ include_warnings: false }, ctx());
+      expect(r.ok).toBe(true);
+      expect(r.issues).toEqual([]);
+    });
+
     it("get_usage returns canonical snippets and constraints", async () => {
       const r = await getUsageHandler.handle(
         { id: "component:button", language: "tsx", include_constraints: true },

@@ -133,6 +133,7 @@ describe("Phase 2 — HTTP transport", () => {
       expect(names).toContain("get_usage");
       expect(names).toContain("recommend_composition");
       expect(names).toContain("validate_composition");
+      expect(names).toContain("inspect_coverage");
 
       const result = await client.callTool({
         name: "describe_schema",
@@ -170,6 +171,14 @@ describe("Phase 2 — HTTP transport", () => {
       };
       expect(usc.importPath).toBe("@acme/ui/button");
       expect(usc.examples.some((e) => e.code.includes("<Button"))).toBe(true);
+
+      const coverage = await client.callTool({
+        name: "inspect_coverage",
+        arguments: { include_warnings: false },
+      });
+      const csc = coverage.structuredContent as { ok: boolean; issues: unknown[] };
+      expect(csc.ok).toBe(true);
+      expect(csc.issues).toEqual([]);
 
       await client.close();
     }, 15_000);

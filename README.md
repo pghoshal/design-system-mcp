@@ -471,6 +471,7 @@ The server exposes generic verbs:
 | `get_usage` | Return canonical imports, examples, props, and constraints |
 | `recommend_composition` | Return an implementation brief for a UI intent |
 | `validate_composition` | Validate planned components, props, patterns, and tokens before coding |
+| `inspect_coverage` | Report content coverage gaps before deterministic generation |
 
 Example `validate_ui` request:
 

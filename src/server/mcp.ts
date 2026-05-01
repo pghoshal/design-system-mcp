@@ -5,6 +5,7 @@ import { handler as describeSchemaHandler } from "../tools/describe-schema.js";
 import { handler as getEntityHandler } from "../tools/get-entity.js";
 import { handler as getRelatedHandler } from "../tools/get-related.js";
 import { handler as getUsageHandler } from "../tools/get-usage.js";
+import { handler as inspectCoverageHandler } from "../tools/inspect-coverage.js";
 import { handler as listEntitiesHandler } from "../tools/list-entities.js";
 import { handler as recommendCompositionHandler } from "../tools/recommend-composition.js";
 import { handler as resolveTokenHandler } from "../tools/resolve-token.js";
@@ -32,6 +33,7 @@ const TOOLS: ReadonlyArray<ToolHandler<any, any>> = [
   getUsageHandler,
   recommendCompositionHandler,
   validateCompositionHandler,
+  inspectCoverageHandler,
 ];
 
 export function buildMcpServer(opts: BuildServerOptions): McpServer {
