@@ -3,6 +3,7 @@ import path from "node:path";
 import type { Logger } from "../observability/logger.js";
 import { loadComponentApiProps } from "./component-api.js";
 import { ComponentMetadataSchema } from "./schema.js";
+import { loadStorybookExamples } from "./storybook.js";
 import type { ComponentMetadata, ComponentProp, Entity } from "./types.js";
 
 /**
@@ -81,11 +82,18 @@ async function enrichComponentMetadata(
   logger: Logger,
 ): Promise<ComponentMetadata> {
   const apiProps = await loadComponentApiProps(componentDir, component.name, logger);
-  if (apiProps.length === 0) return component;
+  const storyExamples = await loadStorybookExamples(
+    componentDir,
+    component.name,
+    component.importPath,
+    logger,
+  );
+  if (apiProps.length === 0 && storyExamples.length === 0) return component;
 
   return {
     ...component,
     props: mergeProps(component.props, apiProps),
+    examples: mergeExamples(component.examples, storyExamples),
   };
 }
 
@@ -95,6 +103,19 @@ function mergeProps(metadataProps: ComponentProp[], apiProps: ComponentProp[]): 
   for (const apiProp of apiProps) {
     if (byName.has(apiProp.name)) continue;
     merged.push(apiProp);
+  }
+  return merged;
+}
+
+function mergeExamples(
+  metadataExamples: ComponentMetadata["examples"],
+  storyExamples: ComponentMetadata["examples"],
+): ComponentMetadata["examples"] {
+  const merged = [...metadataExamples];
+  const names = new Set(metadataExamples.map((example) => example.name));
+  for (const example of storyExamples) {
+    if (names.has(example.name)) continue;
+    merged.push(example);
   }
   return merged;
 }

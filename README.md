@@ -28,6 +28,7 @@ Implemented:
 - JSON regex validation rules
 - Component metadata ingestion from `components/*/component.json`
 - TypeScript component API parser for `*Props` interfaces and type literals
+- Storybook CSF story parser for canonical examples and variants
 - Canonical usage examples, constraints, and prop metadata
 - Composition recommendation and composition/prop validation
 - Optional HTTP API-key auth
@@ -35,7 +36,6 @@ Implemented:
 
 Not implemented yet:
 
-- Storybook story parser
 - MDX documentation parser
 - MCP resources and prompt registration beyond loaded prompt data
 - Production hardening docs and rollout playbooks
@@ -246,6 +246,8 @@ Build a {{component_type}} using the design system.
 Component metadata lives in `components/<ComponentName>/component.json`. This gives agents stable imports, prop contracts, canonical examples, constraints, and relationships without requiring the MCP server to generate application code.
 
 When TypeScript source files are present beside `component.json`, the loader also reads the first matching `*Props` interface or type literal, preferring `<ComponentName>Props`. Extracted props are merged into the metadata. Hand-authored `component.json` values win when both sources define the same prop.
+
+When Storybook CSF files such as `Card.stories.tsx` are present, object stories with literal `args` are converted into additional usage examples. This keeps `get_usage` aligned with existing component examples without executing Storybook.
 
 ```json
 {

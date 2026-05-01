@@ -179,6 +179,18 @@ describe("Phase 1 — local mode integration", () => {
       expect(props.find((prop) => prop.name === "tone")?.description).toBeUndefined();
       expect(props.some((prop) => prop.name === "helperOnly")).toBe(false);
     });
+
+    it("enriches component examples from Storybook stories", async () => {
+      const r = await getEntityHandler.handle(
+        { id: "component:card", resolve_relations: false },
+        ctx(),
+      );
+      const examples = r.entity.data.examples as Array<{ name: string; code: string }>;
+      const story = examples.find((example) => example.name === "Neutral Card");
+      expect(story?.code).toContain('import { Card } from "@acme/ui/card";');
+      expect(story?.code).toContain('<Card title="Billing" tone="neutral">Payment details</Card>');
+      expect(examples.some((example) => example.name === "Helper Story")).toBe(false);
+    });
   });
 
   describe("list_entities", () => {
@@ -250,6 +262,19 @@ describe("Phase 1 — local mode integration", () => {
       expect(r.examples.length).toBeGreaterThan(0);
       expect(r.examples[0]?.code).toMatch(/<Button/);
       expect(r.constraints.map((c) => c.id)).toContain("button-specific-label");
+    });
+
+    it("get_usage includes Storybook-derived snippets", async () => {
+      const r = await getUsageHandler.handle(
+        { id: "component:card", language: "tsx", include_constraints: false },
+        ctx(),
+      );
+      expect(r.examples.some((example) => example.name === "Neutral Card")).toBe(true);
+      expect(
+        r.examples.some((example) =>
+          example.code.includes('<Card title="Delete project?" tone="danger" disabled={true}>'),
+        ),
+      ).toBe(true);
     });
 
     it("validate_composition catches missing and invalid props", async () => {
