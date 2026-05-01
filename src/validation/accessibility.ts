@@ -141,12 +141,18 @@ function positiveTabIndexViolation(tag: TagMatch): Violation | null {
 
 function autofocusViolation(tag: TagMatch): Violation | null {
   if (!tag.attrs.has("autofocus") && !tag.attrs.has("autoFocus")) return null;
+  // Deterministic fix: drop the `autofocus` / `autoFocus` attribute. The
+  // replacement target is the matched tag with the attribute stripped out.
+  const withoutAttr = tag.match
+    .replace(/\s*\bautoFocus\s*(?:=\s*(?:\{[^}]*\}|"[^"]*"|'[^']*'))?/g, "")
+    .replace(/\s*\bautofocus\s*(?:=\s*(?:"[^"]*"|'[^']*'))?/gi, "");
   return violation(
     tag,
     "a11y-no-autofocus",
     "warning",
     "Autofocus can move keyboard and screen-reader users unexpectedly.",
     "Move focus intentionally after user action or route change.",
+    withoutAttr,
   );
 }
 
@@ -273,6 +279,7 @@ function violation(
   severity: Violation["severity"],
   message: string,
   suggestion: string,
+  replaceWith?: string,
 ): Violation {
   return {
     ruleId,
@@ -282,5 +289,7 @@ function violation(
     column: tag.column,
     match: tag.match,
     suggestion,
+    ...(replaceWith !== undefined ? { replaceWith } : {}),
+    provenance: { ruleSource: "built-in" },
   };
 }

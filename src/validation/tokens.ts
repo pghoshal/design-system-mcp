@@ -82,6 +82,7 @@ function findRawLengths(code: string): Violation[] {
     severity: "error",
     message: `Raw length value ${match} must use a design token.`,
     match,
+    provenance: { ruleSource: "built-in" },
   }));
 }
 
@@ -92,6 +93,7 @@ function findRawColorFunctions(code: string): Violation[] {
     severity: "error",
     message: `Raw color function ${match} must use a color token.`,
     match,
+    provenance: { ruleSource: "built-in" },
   }));
 }
 
@@ -180,6 +182,7 @@ function cssVarViolation(
       severity: "error",
       message: `Unknown CSS token variable ${cssVar}.`,
       match: usage.match,
+      provenance: { ruleSource: "built-in" },
     };
   }
   if (token && !token.isSemantic && activeRules.includes("prefer-semantic-tokens")) {
@@ -188,6 +191,11 @@ function cssVarViolation(
       severity: "warning",
       message: `${cssVar} is a primitive token; prefer a semantic token for application UI.`,
       match: usage.match,
+      provenance: {
+        ruleSource: "built-in",
+        sourceEntity: token.entity.id,
+        sourceEntityPath: token.entity.source.path,
+      },
     };
   }
   return null;

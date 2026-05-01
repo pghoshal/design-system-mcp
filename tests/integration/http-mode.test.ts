@@ -182,6 +182,107 @@ describe("Phase 2 — HTTP transport", () => {
 
       await client.close();
     }, 15_000);
+
+    it("prompts/list + prompts/get return loaded design-system prompts", async () => {
+      const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
+        requestInit: { headers: { Authorization: `Bearer ${API_KEY}` } },
+      });
+      const client = new Client({ name: "test-client", version: "0.0.1" }, { capabilities: {} });
+      // biome-ignore lint/suspicious/noExplicitAny: SDK boundary
+      await client.connect(transport as any);
+
+      const list = await client.listPrompts();
+      const names = list.prompts.map((p) => p.name);
+      expect(names).toContain("build_with_design_system");
+
+      const got = await client.getPrompt({
+        name: "build_with_design_system",
+        arguments: { component_type: "settings page", requirements: "tabs on the left" },
+      });
+      expect(got.messages.length).toBeGreaterThan(0);
+      const firstMsg = got.messages[0];
+      const text =
+        firstMsg && firstMsg.content.type === "text" ? (firstMsg.content.text as string) : "";
+      expect(text).toContain("settings page");
+      expect(text).toContain("tabs on the left");
+
+      await client.close();
+    }, 15_000);
+
+    it("rejects prompts/list and resources/list without Authorization", async () => {
+      const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`));
+      const client = new Client({ name: "test-client", version: "0.0.1" }, { capabilities: {} });
+      // biome-ignore lint/suspicious/noExplicitAny: SDK boundary
+      await expect(client.connect(transport as any)).rejects.toThrow();
+    }, 15_000);
+
+    it("resources/list + resources/read expose manifest, schema, and entities", async () => {
+      const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
+        requestInit: { headers: { Authorization: `Bearer ${API_KEY}` } },
+      });
+      const client = new Client({ name: "test-client", version: "0.0.1" }, { capabilities: {} });
+      // biome-ignore lint/suspicious/noExplicitAny: SDK boundary
+      await client.connect(transport as any);
+
+      const list = await client.listResources();
+      const uris = list.resources.map((r) => r.uri);
+      expect(uris).toContain("design://manifest");
+      expect(uris).toContain("design://schema");
+
+      const manifest = await client.readResource({ uri: "design://manifest" });
+      expect(manifest.contents.length).toBeGreaterThan(0);
+      const manifestBody = manifest.contents[0];
+      expect(manifestBody?.mimeType).toBe("application/json");
+      const manifestText =
+        manifestBody && "text" in manifestBody ? (manifestBody.text as string) : "";
+      const manifestJson = JSON.parse(manifestText) as {
+        types: Record<string, unknown>;
+      };
+      expect(Object.keys(manifestJson.types).length).toBeGreaterThan(0);
+
+      const schema = await client.readResource({ uri: "design://schema" });
+      expect(schema.contents[0]?.mimeType).toBe("application/json");
+
+      const entity = await client.readResource({ uri: "design://entity/principle:clarity" });
+      const body = entity.contents[0];
+      expect(body?.mimeType).toBe("application/json");
+      const entityText = body && "text" in body ? (body.text as string) : "";
+      const entityJson = JSON.parse(entityText) as {
+        id: string;
+        type: string;
+        summary: string;
+      };
+      expect(entityJson.id).toBe("principle:clarity");
+      expect(entityJson.type).toBe("principle");
+
+      // Per-type templated resources are listed and resolve.
+      const principleUri = "design://principle/principle:clarity";
+      expect(uris).toContain(principleUri);
+      const principleRead = await client.readResource({ uri: principleUri });
+      const principleBody = principleRead.contents[0];
+      expect(principleBody?.mimeType).toBe("application/json");
+
+      const promptUri = "design://prompt/build_with_design_system";
+      expect(uris).toContain(promptUri);
+      const promptRead = await client.readResource({ uri: promptUri });
+      const promptBody = promptRead.contents[0];
+      const promptText = promptBody && "text" in promptBody ? (promptBody.text as string) : "";
+      const promptJson = JSON.parse(promptText) as { name: string; body: string };
+      expect(promptJson.name).toBe("build_with_design_system");
+      expect(promptJson.body.length).toBeGreaterThan(0);
+
+      // Reading an unknown entity surfaces an error to the client.
+      await expect(
+        client.readResource({ uri: "design://entity/token:does-not-exist" }),
+      ).rejects.toThrow();
+
+      // Reading the wrong type rejects with a clear message.
+      await expect(
+        client.readResource({ uri: "design://principle/token:color.action.primary" }),
+      ).rejects.toThrow();
+
+      await client.close();
+    }, 15_000);
   });
 
   describe("/admin/refresh", () => {

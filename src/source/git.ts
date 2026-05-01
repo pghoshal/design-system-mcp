@@ -103,8 +103,12 @@ export class GitSourceAdapter implements SourceAdapter {
   }
 }
 
-/** Derive a deterministic dir name from a Git URL. */
-function deriveRepoSlug(url: string): string {
+/**
+ * Derive a deterministic directory name from a Git URL. Exported only for unit
+ * tests; production code should not call this directly.
+ * @internal
+ */
+export function deriveRepoSlug(url: string): string {
   const trimmed = url.replace(/\.git$/, "");
   const segments = trimmed.split(/[:/]/).filter(Boolean);
   return (
@@ -115,8 +119,12 @@ function deriveRepoSlug(url: string): string {
   );
 }
 
-/** Embed a PAT into an https URL for transport-level auth. SSH URLs pass through unchanged. */
-function embedTokenIfHttps(url: string, token: string | undefined): string {
+/**
+ * Embed a PAT into an https URL for transport-level auth. SSH URLs and
+ * non-URLs pass through unchanged. Exported for unit testing.
+ * @internal
+ */
+export function embedTokenIfHttps(url: string, token: string | undefined): string {
   if (!token) return url;
   try {
     const u = new URL(url);
@@ -131,8 +139,11 @@ function embedTokenIfHttps(url: string, token: string | undefined): string {
   return url;
 }
 
-/** Strip credentials from a URL for safe logging. */
-function redact(url: string): string {
+/**
+ * Strip credentials from a URL for safe logging. Exported for unit testing.
+ * @internal
+ */
+export function redact(url: string): string {
   try {
     const u = new URL(url);
     if (u.username || u.password) {

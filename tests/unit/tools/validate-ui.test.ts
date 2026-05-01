@@ -128,7 +128,12 @@ describe("validate_ui", () => {
       ctx(),
     );
     expect(r.ok).toBe(true);
-    expect(r.violations.some((v) => v.ruleId === "prefer-semantic-tokens")).toBe(true);
+    const violation = r.violations.find((v) => v.ruleId === "prefer-semantic-tokens");
+    expect(violation?.provenance).toMatchObject({
+      ruleSource: "built-in",
+      sourceEntity: "token:color.blue.500",
+      sourceEntityPath: "tokens/core.tokens.json",
+    });
   });
 
   it("can run a selected built-in semantic token rule", async () => {
@@ -245,6 +250,8 @@ describe("validate_ui", () => {
       "a11y-no-positive-tabindex",
       "a11y-no-autofocus",
     ]);
+    expect(r.violations[1]?.replaceWith).toBe("<input aria-label='Search' tabIndex={2}/>");
+    expect(r.violations[1]?.provenance).toEqual({ ruleSource: "built-in" });
   });
 
   it("reports blame language in UI copy", async () => {
@@ -258,6 +265,11 @@ describe("validate_ui", () => {
     );
     expect(r.ok).toBe(false);
     expect(r.violations[0]?.ruleId).toBe("copy-no-blame");
+    expect(r.violations[0]?.provenance).toMatchObject({
+      ruleSource: "built-in",
+      sourceEntity: "voice:default",
+      sourceEntityPath: "docs/voice-and-tone.md",
+    });
   });
 
   it("reports hype and exclamation marks in UI copy", async () => {
@@ -359,6 +371,10 @@ describe("validate_ui", () => {
     expect(v?.severity).toBe("error");
     expect(v?.line).toBe(1);
     expect(v?.match).toBe("#2563EB");
+    expect(v?.provenance).toEqual({
+      ruleSource: "source-repo",
+      rulePath: "rules/no-hex-colors.json",
+    });
   });
 
   it("filters by `rules` argument when supplied", async () => {

@@ -1,0 +1,156 @@
+# Kubernetes Deployment for ds-mcp-server.
+#
+# SAMPLE — replace placeholder values:
+#   - image tag (use immutable git SHA tag, never :latest in production)
+#   - secret reference (see secret.yaml in this directory)
+#   - storage class on the PVC if your cluster doesn't have a default
+#
+# Single instance is intentional:
+#   - replicas: 1
+#   - strategy: Recreate (no rolling update; brief outage during deploy is
+#     acceptable, the alternative is multi-replica which the codebase does
+#     not support — see `.claude/hallucinate.md` §1)
+#   - PodDisruptionBudget set to maxUnavailable: 1 so the cluster doesn't
+#     refuse to drain a node holding the only pod
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ds-mcp-server
+  labels:
+    app: ds-mcp-server
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ds-mcp-server
+  template:
+    metadata:
+      labels:
+        app: ds-mcp-server
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: server
+          # IMPORTANT: pin to an immutable tag (git SHA or semver) — never :latest
+          image: ghcr.io/your-org/ds-mcp-server:vX.Y.Z
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: DS_MCP_MODE
+              value: "http"
+            - name: DS_MCP_SOURCE_MODE
+              value: "git"
+            - name: DS_MCP_SOURCE_BRANCH
+              value: "main"
+            - name: DS_MCP_REFRESH_INTERVAL_SEC
+              value: "300"
+            - name: DS_MCP_AUTH_MODE
+              value: "apikey"
+            - name: LOG_LEVEL
+              value: "info"
+            - name: PORT
+              value: "3000"
+            - name: DS_MCP_CACHE_DIR
+              value: "/var/cache/ds-mcp"
+          envFrom:
+            - secretRef:
+                # See secret.yaml. Provides DS_MCP_SOURCE_URL,
+                # DS_MCP_API_KEYS, DS_MCP_ADMIN_TOKEN, GIT_AUTH_TOKEN.
+                name: ds-mcp-server-env
+          # Liveness: kill the pod if the process locks up. /healthz returns
+          # 200 unconditionally as long as the event loop is responsive.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          # Readiness: pull the pod out of the Service when the bundle isn't
+          # loaded (boot or graceful drain). Boot may take a few seconds for
+          # the initial git clone + Style Dictionary build, so allow ample
+          # initialDelay.
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: cache
+              mountPath: /var/cache/ds-mcp
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: cache
+          persistentVolumeClaim:
+            claimName: ds-mcp-cache
+        - name: tmp
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ds-mcp-server
+spec:
+  type: ClusterIP
+  selector:
+    app: ds-mcp-server
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ds-mcp-cache
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+  # storageClassName: gp3   # uncomment + set to your cluster's default
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ds-mcp-server
+spec:
+  # Single-instance deployment: PDB allows the one pod to be evicted (e.g.
+  # for node drain) since we accept brief unavailability. Setting
+  # minAvailable: 1 with replicas: 1 would block all node drains.
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: ds-mcp-server

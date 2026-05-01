@@ -48,7 +48,8 @@ export function runCopyValidation(
   const texts = extractCopyText(code);
   const active = new Set<string>(activeRules);
   const violations: Violation[] = [];
-  const voiceSource = voiceSourcePath(bundle);
+  const voice = voiceEntity(bundle);
+  const voiceSource = voice ? ` from ${voice.id}` : "";
 
   for (const text of texts) {
     if (active.has("copy-no-blame") && BLAME_RE.test(text.text)) {
@@ -59,6 +60,7 @@ export function runCopyValidation(
           "error",
           "Copy must not blame the user.",
           `Rewrite in calm, neutral language${voiceSource}.`,
+          voice,
         ),
       );
     }
@@ -70,6 +72,7 @@ export function runCopyValidation(
           "warning",
           "Copy should stay calm and avoid hype, alarmism, or exclamation marks.",
           `Use plain, understated wording${voiceSource}.`,
+          voice,
         ),
       );
     }
@@ -81,6 +84,7 @@ export function runCopyValidation(
           "warning",
           "Action labels should name the action.",
           `Replace vague labels with specific verbs and objects${voiceSource}.`,
+          voice,
         ),
       );
     }
@@ -96,6 +100,7 @@ export function runCopyValidation(
           "warning",
           "Destructive-action copy should be direct, not hedged.",
           `Name the destructive action and outcome directly${voiceSource}.`,
+          voice,
         ),
       );
     }
@@ -156,9 +161,9 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function voiceSourcePath(bundle: Bundle): string {
+function voiceEntity(bundle: Bundle): { id: string; source: { path: string } } | undefined {
   const voice = Array.from(bundle.entities.values()).find((entity) => entity.type === "voice");
-  return voice ? ` from ${voice.id}` : "";
+  return voice ? { id: voice.id, source: { path: voice.source.path } } : undefined;
 }
 
 function lineStartOffsets(code: string): number[] {
@@ -193,6 +198,7 @@ function violation(
   severity: Violation["severity"],
   message: string,
   suggestion: string,
+  voice?: { id: string; source: { path: string } },
 ): Violation {
   return {
     ruleId,
@@ -202,5 +208,11 @@ function violation(
     column: text.column,
     match: text.text,
     suggestion,
+    provenance: {
+      ruleSource: "built-in",
+      ...(voice !== undefined
+        ? { sourceEntity: voice.id, sourceEntityPath: voice.source.path }
+        : {}),
+    },
   };
 }

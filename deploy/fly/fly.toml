@@ -1,0 +1,70 @@
+# Fly.io deployment for ds-mcp-server.
+#
+# This is a SAMPLE manifest — replace placeholder values before `fly launch`:
+#   - `app` name (must be globally unique on Fly)
+#   - `primary_region` (pick a region close to your users)
+#   - `image` tag (use an immutable tag, never `:latest` in production —
+#     see `.claude/deployment.md` §1.4)
+#
+# Single-instance is intentional. Do NOT raise `min_machines_running` or
+# add replicas — the codebase is not designed for multi-instance.
+#
+# Set secrets before deploy:
+#   fly secrets set DS_MCP_SOURCE_URL=https://github.com/your-org/design-system.git
+#   fly secrets set GIT_AUTH_TOKEN=<github-pat>
+#   fly secrets set DS_MCP_API_KEYS=<sha256-hex-comma-separated>
+#   fly secrets set DS_MCP_ADMIN_TOKEN=<random-token>
+
+app = "ds-mcp-server"
+primary_region = "iad"
+
+[build]
+  image = "ghcr.io/your-org/ds-mcp-server:vX.Y.Z"
+
+[env]
+  DS_MCP_MODE = "http"
+  DS_MCP_SOURCE_MODE = "git"
+  DS_MCP_SOURCE_BRANCH = "main"
+  DS_MCP_REFRESH_INTERVAL_SEC = "300"
+  DS_MCP_AUTH_MODE = "apikey"
+  LOG_LEVEL = "info"
+  PORT = "3000"
+
+[[services]]
+  internal_port = 3000
+  protocol = "tcp"
+  auto_stop_machines = "off"
+  min_machines_running = 1
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [[services.http_checks]]
+    interval = "10s"
+    timeout = "2s"
+    grace_period = "30s"
+    method = "get"
+    path = "/readyz"
+    protocol = "http"
+
+  [[services.tcp_checks]]
+    interval = "10s"
+    timeout = "2s"
+    grace_period = "5s"
+
+[[mounts]]
+  # Persisted volume for the Git checkout. Survives restarts so cold start
+  # skips the initial clone after the first deploy.
+  source = "ds_mcp_cache"
+  destination = "/home/nonroot/.cache/ds-mcp"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512

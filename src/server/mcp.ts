@@ -14,6 +14,7 @@ import { handler as validateCompositionHandler } from "../tools/validate-composi
 import { handler as validateUiHandler } from "../tools/validate-ui.js";
 import { ToolError } from "../util/errors.js";
 import { newRequestId } from "../util/ids.js";
+import { registerPrompts, registerResources } from "./registrations.js";
 import type { RequestContext, ServerDeps, ToolHandler } from "./types.js";
 
 export interface BuildServerOptions extends ServerDeps {
@@ -54,6 +55,8 @@ export function buildMcpServer(opts: BuildServerOptions): McpServer {
   for (const tool of TOOLS) {
     registerTool(server, tool, opts);
   }
+  registerPrompts(server, opts);
+  registerResources(server, opts);
 
   return server;
 }

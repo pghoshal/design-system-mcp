@@ -27,6 +27,10 @@ export function runRegexDetector(rule: Rule, code: string): Violation[] {
         line: i + 1,
         column: m.index + 1,
         match,
+        provenance: {
+          ruleSource: "source-repo",
+          ...(rule.sourcePath !== undefined ? { rulePath: rule.sourcePath } : {}),
+        },
       });
       // Guard against zero-width matches infinite-looping
       if (m.index === re.lastIndex) re.lastIndex++;

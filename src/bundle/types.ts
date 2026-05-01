@@ -172,6 +172,28 @@ export interface Rule {
   severity: RuleSeverity;
   appliesTo: RuleLanguage[];
   detector: RuleDetector;
+  /**
+   * Path of the rule definition file relative to the source repo root, e.g.
+   * "rules/no-hex-colors.json". `undefined` for built-in rules shipped with
+   * the server. Populated by the rule loader.
+   */
+  sourcePath?: string | undefined;
+}
+
+/**
+ * Provenance for a violation: where the rule itself came from, and which
+ * design-system entity (if any) the violation links back to. Populated by
+ * the validator that produced the violation. Optional because not every
+ * rule has a meaningful entity to point at.
+ */
+export interface ViolationProvenance {
+  ruleSource: "built-in" | "source-repo";
+  /** Path of the rule definition file in the source repo, when applicable. */
+  rulePath?: string | undefined;
+  /** Entity id that motivates the rule or supplies the suggested fix. */
+  sourceEntity?: string | undefined;
+  /** Source path of that entity within the design-system repo. */
+  sourceEntityPath?: string | undefined;
 }
 
 export interface Violation {
@@ -181,7 +203,17 @@ export interface Violation {
   line?: number | undefined;
   column?: number | undefined;
   match?: string | undefined;
+  /** Free-text human-facing remediation hint. */
   suggestion?: string | undefined;
+  /**
+   * Deterministic, machine-applicable replacement. Present only when the rule
+   * can produce a single correct fix — e.g. "remove this attribute", or
+   * "replace this CSS variable with this exact other CSS variable". When set,
+   * IDE consumers may apply the substitution at `(line, column, match.length)`.
+   */
+  replaceWith?: string | undefined;
+  /** Where the rule + linked entity come from. See ViolationProvenance. */
+  provenance?: ViolationProvenance | undefined;
 }
 
 /**

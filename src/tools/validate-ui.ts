@@ -22,6 +22,15 @@ const ViolationSchema = z.object({
   column: z.number().int().positive().optional(),
   match: z.string().optional(),
   suggestion: z.string().optional(),
+  replaceWith: z.string().optional(),
+  provenance: z
+    .object({
+      ruleSource: z.enum(["built-in", "source-repo"]),
+      rulePath: z.string().optional(),
+      sourceEntity: z.string().optional(),
+      sourceEntityPath: z.string().optional(),
+    })
+    .optional(),
 });
 
 export const ValidateUiInput = z.object({

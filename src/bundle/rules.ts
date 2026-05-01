@@ -77,7 +77,11 @@ export async function loadRules(repoPath: string, logger: Logger): Promise<Rule[
       continue;
     }
     seen.add(result.data.id);
-    out.push(result.data as Rule);
+    const rule: Rule = {
+      ...(result.data as Rule),
+      sourcePath: path.relative(repoPath, file),
+    };
+    out.push(rule);
   }
 
   logger.info({ count: out.length, scanned: files.length }, "loaded rules");

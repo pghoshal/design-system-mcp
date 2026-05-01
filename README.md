@@ -33,11 +33,11 @@ Implemented:
 - Composition recommendation and composition/prop validation
 - Optional HTTP API-key auth
 - Health, readiness, version, and admin refresh endpoints
-
-Not implemented yet:
-
-- MCP resources and prompt registration beyond loaded prompt data
-- Production hardening docs and rollout playbooks
+- MCP prompts registered from the loaded source repo (`prompts/*.prompt.md`)
+- MCP resources for `design://manifest`, `design://schema`, `design://entity/{id}`, plus per-type templates `design://principle/{id}`, `design://pattern/{id}`, `design://component/{id}`, `design://prompt/{name}`
+- Operator runbook (`docs/runbook.md`), client setup guide (`docs/client-setup.md`), sample Fly + Kubernetes deployment manifests under `deploy/`
+- Performance baseline gates in CI (`tests/integration/perf-baseline.test.ts`) backed by the SLO table in `.claude/lld.md` §5.1
+- CI-friendly validation CLI (`pnpm validate -- --source <design-system-repo> <file...>`) with JSON output and nonzero exit on error violations
 
 ## Design Principles
 
@@ -86,9 +86,9 @@ AI coding agents
 
 ## Prerequisites
 
-- Node.js 22 or newer
-- pnpm 9 or newer
-- Git, if using `DS_MCP_SOURCE_MODE=git`
+- Node.js 22.0.0 or newer (LTS recommended; matches `package.json` `engines.node`)
+- pnpm 9.0.0 or newer (`engines.pnpm`)
+- git 2.5+, if using `DS_MCP_SOURCE_MODE=git` (modern distros all qualify; we rely on `--branch`/`--single-branch`/`--depth 1`)
 
 Recommended:
 
@@ -560,7 +560,11 @@ Example response:
       "message": "Raw hex color #2563EB - use a color token instead",
       "line": 1,
       "column": 16,
-      "match": "#2563EB"
+      "match": "#2563EB",
+      "provenance": {
+        "ruleSource": "source-repo",
+        "rulePath": "rules/no-hex-colors.json"
+      }
     }
   ],
   "ranRules": ["no-hex-colors"],
@@ -605,6 +609,14 @@ Run only unit or integration tests:
 pnpm test:unit
 pnpm test:integration
 ```
+
+Validate changed UI files against a local design-system source repo in CI:
+
+```bash
+pnpm validate -- --source ./path/to/design-system src/App.tsx
+```
+
+The command prints JSON and exits `1` if any error-severity `validate_ui` violation is found.
 
 This project follows test-first development for non-trivial changes. Read [.claude/tdd.md](./.claude/tdd.md) and [.claude/critic.md](./.claude/critic.md) before making behavioral changes.
 
