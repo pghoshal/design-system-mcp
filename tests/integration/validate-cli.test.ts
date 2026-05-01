@@ -54,4 +54,36 @@ describe("validate CLI", () => {
       stdout: expect.stringContaining('"rulePath": "rules/no-hex-colors.json"'),
     });
   });
+
+  it("prints SARIF for code-scanning integrations", async () => {
+    const file = path.join(tmpDir, "bad.tsx");
+    await fs.writeFile(file, "const color = '#2563EB';\n", "utf8");
+
+    await expect(
+      execFileAsync(TSX_BIN, [ENTRY, "--source", FIXTURE, "--format", "sarif", file]),
+    ).rejects.toMatchObject({
+      code: 1,
+      stdout: expect.stringContaining('"version": "2.1.0"'),
+    });
+  });
+
+  it("validates composition plan files in CI", async () => {
+    const plan = path.join(tmpDir, "composition.json");
+    await fs.writeFile(
+      plan,
+      JSON.stringify({
+        pattern: "pattern:confirmation-dialog",
+        components: [{ id: "component:button", props: { variant: "danger" } }],
+        tokens: [],
+      }),
+      "utf8",
+    );
+
+    await expect(
+      execFileAsync(TSX_BIN, [ENTRY, "--source", FIXTURE, "--composition", plan]),
+    ).rejects.toMatchObject({
+      code: 1,
+      stdout: expect.stringContaining('"path": "props.children"'),
+    });
+  });
 });

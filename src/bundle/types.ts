@@ -84,6 +84,9 @@ export interface UsageExample {
   language: string;
   code: string;
   description?: string | undefined;
+  state?: string | undefined;
+  controls?: Record<string, string[]> | undefined;
+  interactions?: string[] | undefined;
 }
 
 export interface ComponentDependency {
@@ -108,6 +111,9 @@ export interface ComponentProp {
   description?: string | undefined;
   values?: string[] | undefined;
   default?: string | number | boolean | undefined;
+  deprecated?: boolean | undefined;
+  replacedBy?: string | undefined;
+  controlled?: boolean | undefined;
 }
 
 export interface DesignConstraint {

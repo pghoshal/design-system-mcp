@@ -147,6 +147,15 @@ function validateComponent(
         suggestion: `Use one of: ${def.values.join(", ")}.`,
       });
     }
+    if (def.deprecated) {
+      violations.push({
+        entityId: entity.id,
+        severity: "warning",
+        path: `props.${name}`,
+        message: `Prop '${name}' on ${entity.id} is deprecated.`,
+        ...(def.replacedBy ? { suggestion: `Use '${def.replacedBy}' instead.` } : {}),
+      });
+    }
   }
 
   if (pattern && data.patterns && data.patterns.length > 0 && !data.patterns.includes(pattern)) {

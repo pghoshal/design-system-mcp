@@ -99,12 +99,28 @@ async function enrichComponentMetadata(
 
 function mergeProps(metadataProps: ComponentProp[], apiProps: ComponentProp[]): ComponentProp[] {
   const merged = [...metadataProps];
-  const byName = new Map(metadataProps.map((prop) => [prop.name, prop]));
+  const byName = new Map(metadataProps.map((prop, index) => [prop.name, { prop, index }]));
   for (const apiProp of apiProps) {
-    if (byName.has(apiProp.name)) continue;
+    const existing = byName.get(apiProp.name);
+    if (existing) {
+      merged[existing.index] = mergeProp(existing.prop, apiProp);
+      continue;
+    }
     merged.push(apiProp);
   }
   return merged;
+}
+
+function mergeProp(metadataProp: ComponentProp, apiProp: ComponentProp): ComponentProp {
+  return {
+    ...apiProp,
+    ...metadataProp,
+    description: metadataProp.description ?? apiProp.description,
+    default: metadataProp.default ?? apiProp.default,
+    deprecated: metadataProp.deprecated ?? apiProp.deprecated,
+    replacedBy: metadataProp.replacedBy ?? apiProp.replacedBy,
+    controlled: metadataProp.controlled ?? apiProp.controlled,
+  };
 }
 
 function mergeExamples(

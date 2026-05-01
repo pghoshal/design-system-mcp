@@ -17,6 +17,7 @@ interface TypeScriptModule {
   isVariableStatement(node: Node): node is VariableStatement;
   isIdentifier(node: Node): node is Identifier;
   isObjectLiteralExpression(node: Node): node is ObjectLiteralExpression;
+  isArrayLiteralExpression(node: Node): node is ArrayLiteralExpression;
   isPropertyAssignment(node: Node): node is PropertyAssignment;
   isStringLiteral(node: Node): node is LiteralNode;
   isNoSubstitutionTemplateLiteral(node: Node): node is LiteralNode;
@@ -52,6 +53,10 @@ interface VariableDeclaration extends Node {
 
 interface ObjectLiteralExpression extends Node {
   properties: Node[];
+}
+
+interface ArrayLiteralExpression extends Node {
+  elements: Node[];
 }
 
 interface PropertyAssignment extends Node {
@@ -121,6 +126,7 @@ function readStories(
   importPath: string,
 ): UsageExample[] {
   const examples: UsageExample[] = [];
+  const controls = readMetaControls(ts, sourceFile);
   for (const statement of sourceFile.statements) {
     if (!ts.isVariableStatement(statement)) continue;
     if (!isExported(ts, statement)) continue;
@@ -131,15 +137,65 @@ function readStories(
       }
       const args = readArgs(ts, declaration.initializer);
       if (!args) continue;
+      const interactions = readInteractions(ts, sourceFile, declaration.initializer);
       examples.push({
         name: humanize(declaration.name.text),
         language: "tsx",
         code: storyCode(componentName, importPath, args),
         description: "Generated from Storybook story args.",
+        state: storyState(declaration.name.text, componentName),
+        ...(Object.keys(controls).length > 0 ? { controls } : {}),
+        ...(interactions.length > 0 ? { interactions } : {}),
       });
     }
   }
   return examples;
+}
+
+function readMetaControls(ts: TypeScriptModule, sourceFile: SourceFile): Record<string, string[]> {
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name) || declaration.name.text !== "meta") continue;
+      if (!declaration.initializer || !ts.isObjectLiteralExpression(declaration.initializer)) {
+        continue;
+      }
+      const argTypes = propertyNamed(ts, declaration.initializer, "argTypes");
+      if (!argTypes || !ts.isObjectLiteralExpression(argTypes.initializer)) continue;
+      return readArgTypesControls(ts, argTypes.initializer);
+    }
+  }
+  return {};
+}
+
+function readArgTypesControls(
+  ts: TypeScriptModule,
+  argTypes: ObjectLiteralExpression,
+): Record<string, string[]> {
+  const controls: Record<string, string[]> = {};
+  for (const prop of argTypes.properties) {
+    if (!ts.isPropertyAssignment(prop)) continue;
+    const name = propertyName(ts, prop.name);
+    if (!name || !ts.isObjectLiteralExpression(prop.initializer)) continue;
+    const options = propertyNamed(ts, prop.initializer, "options");
+    if (!options || !ts.isArrayLiteralExpression(options.initializer)) continue;
+    const values = options.initializer.elements
+      .map((node) => literalValue(ts, node))
+      .filter((value): value is StoryArg => value !== null)
+      .map(String);
+    if (values.length > 0) controls[name] = values;
+  }
+  return controls;
+}
+
+function readInteractions(
+  ts: TypeScriptModule,
+  sourceFile: SourceFile,
+  storyObject: ObjectLiteralExpression,
+): string[] {
+  const play = propertyNamed(ts, storyObject, "play");
+  if (!play) return [];
+  return [play.initializer.getText(sourceFile)];
 }
 
 function readArgs(
@@ -220,4 +276,14 @@ function humanize(value: string): string {
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/[_-]/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function storyState(value: string, componentName: string): string | undefined {
+  const withoutComponent = value.replace(new RegExp(`${componentName}$`, "i"), "");
+  const state = withoutComponent
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_-]/g, " ")
+    .trim()
+    .toLowerCase();
+  return state.length > 0 ? state : undefined;
 }

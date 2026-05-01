@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { LocalSourceAdapter } from "../../src/source/local.js";
 import { SourceManager } from "../../src/source/manager.js";
 import { handler as describeHandler } from "../../src/tools/describe-schema.js";
+import { handler as explainDecisionHandler } from "../../src/tools/explain-decision.js";
 import { handler as getEntityHandler } from "../../src/tools/get-entity.js";
 import { handler as getRelatedHandler } from "../../src/tools/get-related.js";
 import { handler as getUsageHandler } from "../../src/tools/get-usage.js";
@@ -263,6 +264,10 @@ describe("Phase 1 — local mode integration", () => {
         required: boolean;
         values?: string[];
         description?: string;
+        default?: string;
+        deprecated?: boolean;
+        replacedBy?: string;
+        controlled?: boolean;
       }>;
       expect(props.find((prop) => prop.name === "title")).toMatchObject({
         type: "string",
@@ -273,8 +278,14 @@ describe("Phase 1 — local mode integration", () => {
         type: '"neutral" | "accent" | "danger" | "elevated"',
         required: false,
         values: ["neutral", "accent", "danger", "elevated"],
+        description: "Visual tone for the card container.",
+        default: "neutral",
       });
-      expect(props.find((prop) => prop.name === "tone")?.description).toBeUndefined();
+      expect(props.find((prop) => prop.name === "legacyTone")).toMatchObject({
+        deprecated: true,
+        replacedBy: "tone",
+      });
+      expect(props.find((prop) => prop.name === "expanded")).toMatchObject({ controlled: true });
       expect(props.some((prop) => prop.name === "helperOnly")).toBe(false);
     });
 
@@ -283,10 +294,21 @@ describe("Phase 1 — local mode integration", () => {
         { id: "component:card", resolve_relations: false },
         ctx(),
       );
-      const examples = r.entity.data.examples as Array<{ name: string; code: string }>;
+      const examples = r.entity.data.examples as Array<{
+        name: string;
+        code: string;
+        state?: string;
+        controls?: Record<string, string[]>;
+        interactions?: string[];
+      }>;
       const story = examples.find((example) => example.name === "Neutral Card");
       expect(story?.code).toContain('import { Card } from "@acme/ui/card";');
       expect(story?.code).toContain('<Card title="Billing" tone="neutral">Payment details</Card>');
+      expect(story?.state).toBe("neutral");
+      expect(story?.controls?.tone).toEqual(["neutral", "accent", "danger"]);
+      expect(
+        examples.find((example) => example.name === "Danger Card")?.interactions?.[0],
+      ).toContain("canvasElement.focus");
       expect(examples.some((example) => example.name === "Helper Story")).toBe(false);
     });
   });
@@ -373,6 +395,15 @@ describe("Phase 1 — local mode integration", () => {
       expect(r.ok).toBe(true);
       expect(r.violations).toEqual([]);
     });
+
+    it("flags invalid ARIA roles", async () => {
+      const r = await validateUiHandler.handle(
+        { code: '<div role="clickable">Open</div>', language: "tsx", rules: [] },
+        ctx(),
+      );
+      expect(r.ok).toBe(false);
+      expect(r.violations.some((v) => v.ruleId === "a11y-valid-aria-role")).toBe(true);
+    });
   });
 
   describe("enterprise composition tools", () => {
@@ -382,6 +413,8 @@ describe("Phase 1 — local mode integration", () => {
       expect(r.counts.token).toBeGreaterThan(0);
       expect(r.counts.component).toBeGreaterThan(0);
       expect(r.issues.some((issue) => issue.id === "component-props-empty")).toBe(true);
+      expect(r.issues.some((issue) => issue.id === "component-orphan")).toBe(true);
+      expect(r.issues.some((issue) => issue.id === "pattern-contract-target-missing")).toBe(false);
       expect(r.issues.every((issue) => issue.severity !== "error")).toBe(true);
     });
 
@@ -445,6 +478,29 @@ describe("Phase 1 — local mode integration", () => {
       expect(r.violations.some((v) => v.path === "props.tone")).toBe(false);
     });
 
+    it("validate_composition flags deprecated props with replacement guidance", async () => {
+      const r = await validateCompositionHandler.handle(
+        {
+          components: [
+            {
+              id: "component:card",
+              props: { title: "Billing", legacyTone: "accent" },
+            },
+          ],
+          tokens: [],
+        },
+        ctx(),
+      );
+      expect(r.ok).toBe(true);
+      expect(r.violations).toContainEqual(
+        expect.objectContaining({
+          severity: "warning",
+          path: "props.legacyTone",
+          suggestion: "Use 'tone' instead.",
+        }),
+      );
+    });
+
     it("validate_composition enforces pattern contract required tokens", async () => {
       const r = await validateCompositionHandler.handle(
         {
@@ -502,6 +558,33 @@ describe("Phase 1 — local mode integration", () => {
       expect(r.nextSteps).toContain(
         "Call validate_ui on generated code and repair all error violations.",
       );
+    });
+
+    it("recommend_composition includes explicit alternatives and provenance", async () => {
+      const r = await recommendCompositionHandler.handle(
+        { intent: "primary action card", framework: "react", limit: 1 },
+        ctx(),
+      );
+      expect(r.provenance.some((item) => item.entityId === "component:button")).toBe(true);
+      expect(r.provenance.find((item) => item.entityId === "component:button")?.reasons).toContain(
+        "Matched the intent search query.",
+      );
+      expect(r.alternatives.components.length).toBeGreaterThan(0);
+      expect(r.alternatives.components.every((item) => item.id !== "component:button")).toBe(true);
+    });
+
+    it("explain_decision returns deterministic evidence for an entity", async () => {
+      const r = await explainDecisionHandler.handle(
+        { entityId: "component:button", intent: "primary action" },
+        ctx(),
+      );
+      expect(r.entity.id).toBe("component:button");
+      expect(r.reasons.some((reason) => reason.includes("components/Button/component.json"))).toBe(
+        true,
+      );
+      expect(r.evidence.map((item) => item.kind)).toContain("source");
+      expect(r.evidence.map((item) => item.kind)).toContain("relation");
+      expect(r.related.map((item) => item.id)).toContain("token:color.action.primary");
     });
   });
 });

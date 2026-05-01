@@ -4,6 +4,34 @@ import { type ZodTypeAny, z } from "zod";
 import type { Entity, PromptTemplate } from "../bundle/types.js";
 import type { ServerDeps } from "./types.js";
 
+const WORKFLOW_CONTRACT = {
+  mode: "design-system-first",
+  purpose:
+    "Deterministic UX-to-dev handoff contract for agents and harnesses using this design-system MCP server.",
+  requiredSequence: [
+    "describe_schema",
+    "search_design_system",
+    "recommend_composition",
+    "get_usage",
+    "validate_composition",
+    "validate_ui",
+    "explain_decision",
+  ],
+  finalGate: {
+    requiredTools: ["validate_composition", "validate_ui"],
+    requiredOutcome: "No error-severity violations may remain before generated UI is accepted.",
+  },
+  harnessPolicy: {
+    enforceableByServer: false,
+    serverGuarantee:
+      "The server publishes this contract and deterministic evidence; MCP clients or CI harnesses must enforce blocking behavior.",
+  },
+  ci: {
+    code: "pnpm validate -- --source <design-system-repo> --format sarif <file...>",
+    composition: "pnpm validate -- --source <design-system-repo> --composition composition.json",
+  },
+} as const;
+
 /**
  * Register MCP prompts loaded from the source repo's `prompts/*.prompt.md`.
  * Each prompt's `arguments` are turned into a Zod raw shape; placeholders of
@@ -96,6 +124,7 @@ const PER_TYPE_RESOURCES: ReadonlyArray<{
  * Register MCP resources for the design system:
  *   - `design://manifest`           (static)   — schema + counts + build metadata
  *   - `design://schema`             (static)   — schema declaration only
+ *   - `design://workflow`           (static)   — machine-readable handoff contract
  *   - `design://entity/{id}`        (template) — any entity by id
  *   - `design://principle/{id}`     (template) — principle entities only
  *   - `design://pattern/{id}`       (template) — pattern entities only
@@ -173,6 +202,26 @@ export function registerResources(server: McpServer, deps: ServerDeps): void {
         ],
       };
     },
+  );
+
+  server.registerResource(
+    "workflow",
+    "design://workflow",
+    {
+      title: "Design-system workflow contract",
+      description:
+        "Machine-readable UX-to-dev handoff sequence and CI gates for design-consistent generation.",
+      mimeType: "application/json",
+    },
+    async (uri) => ({
+      contents: [
+        {
+          uri: uri.toString(),
+          mimeType: "application/json",
+          text: JSON.stringify(WORKFLOW_CONTRACT, null, 2),
+        },
+      ],
+    }),
   );
 
   registerEntityResource(server, deps);

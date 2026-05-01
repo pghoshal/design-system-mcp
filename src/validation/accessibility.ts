@@ -7,10 +7,82 @@ export const ACCESSIBILITY_RULE_IDS = [
   "a11y-form-control-label",
   "a11y-no-positive-tabindex",
   "a11y-no-autofocus",
+  "a11y-valid-aria-role",
 ] as const;
 
 const SUPPORTED_LANGUAGES = new Set<RuleLanguage>(["tsx", "jsx", "html", "vue"]);
 const FORM_CONTROL_TAGS = new Set(["input", "select", "textarea"]);
+const VALID_ARIA_ROLES = new Set([
+  "alert",
+  "alertdialog",
+  "application",
+  "article",
+  "banner",
+  "button",
+  "cell",
+  "checkbox",
+  "columnheader",
+  "combobox",
+  "complementary",
+  "contentinfo",
+  "definition",
+  "dialog",
+  "directory",
+  "document",
+  "feed",
+  "figure",
+  "form",
+  "grid",
+  "gridcell",
+  "group",
+  "heading",
+  "img",
+  "link",
+  "list",
+  "listbox",
+  "listitem",
+  "log",
+  "main",
+  "marquee",
+  "math",
+  "menu",
+  "menubar",
+  "menuitem",
+  "menuitemcheckbox",
+  "menuitemradio",
+  "navigation",
+  "none",
+  "note",
+  "option",
+  "presentation",
+  "progressbar",
+  "radio",
+  "radiogroup",
+  "region",
+  "row",
+  "rowgroup",
+  "rowheader",
+  "scrollbar",
+  "search",
+  "searchbox",
+  "separator",
+  "slider",
+  "spinbutton",
+  "status",
+  "switch",
+  "tab",
+  "table",
+  "tablist",
+  "tabpanel",
+  "term",
+  "textbox",
+  "timer",
+  "toolbar",
+  "tooltip",
+  "tree",
+  "treegrid",
+  "treeitem",
+]);
 
 interface TagMatch {
   name: string;
@@ -65,6 +137,10 @@ export function runAccessibilityValidation(
     }
     if (active.has("a11y-no-autofocus")) {
       const violation = autofocusViolation(tag);
+      if (violation) violations.push(violation);
+    }
+    if (active.has("a11y-valid-aria-role")) {
+      const violation = validAriaRoleViolation(tag);
       if (violation) violations.push(violation);
     }
   }
@@ -153,6 +229,24 @@ function autofocusViolation(tag: TagMatch): Violation | null {
     "Autofocus can move keyboard and screen-reader users unexpectedly.",
     "Move focus intentionally after user action or route change.",
     withoutAttr,
+  );
+}
+
+function validAriaRoleViolation(tag: TagMatch): Violation | null {
+  const value = attrValue(tag, "role");
+  if (!value) return null;
+  const roles = value
+    .split(/\s+/)
+    .map((role) => role.trim().toLowerCase())
+    .filter(Boolean);
+  const invalid = roles.find((role) => !VALID_ARIA_ROLES.has(role));
+  if (!invalid) return null;
+  return violation(
+    tag,
+    "a11y-valid-aria-role",
+    "error",
+    `ARIA role '${invalid}' is not valid.`,
+    "Use a valid WAI-ARIA role, or remove role when native semantics are sufficient.",
   );
 }
 

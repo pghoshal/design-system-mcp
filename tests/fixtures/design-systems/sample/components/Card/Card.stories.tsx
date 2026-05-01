@@ -1,6 +1,12 @@
 const meta = {
   title: "Components/Card",
   component: "Card",
+  argTypes: {
+    tone: {
+      control: "select",
+      options: ["neutral", "accent", "danger"],
+    },
+  },
 };
 
 export default meta;
@@ -27,5 +33,8 @@ export const DangerCard = {
     tone: "danger",
     children: "This cannot be undone.",
     disabled: true,
+  },
+  play: async ({ canvasElement }: { canvasElement: { focus: () => void } }) => {
+    await canvasElement.focus();
   },
 };

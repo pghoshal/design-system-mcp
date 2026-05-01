@@ -110,6 +110,7 @@ describe("Phase 4 — stdio transport", () => {
       "recommend_composition",
       "validate_composition",
       "inspect_coverage",
+      "explain_decision",
     ]) {
       expect(names).toContain(expected);
     }
@@ -143,12 +144,20 @@ describe("Phase 4 — stdio transport", () => {
     const list = await conn.client.listResources();
     const uris = list.resources.map((r) => r.uri);
     expect(uris).toContain("design://manifest");
+    expect(uris).toContain("design://workflow");
 
     const read = await conn.client.readResource({ uri: "design://manifest" });
     const body = read.contents[0];
     const text = body && "text" in body ? (body.text as string) : "";
     const json = JSON.parse(text) as { totalEntities: number };
     expect(json.totalEntities).toBeGreaterThan(0);
+
+    const workflow = await conn.client.readResource({ uri: "design://workflow" });
+    const workflowBody = workflow.contents[0];
+    const workflowText =
+      workflowBody && "text" in workflowBody ? (workflowBody.text as string) : "";
+    const workflowJson = JSON.parse(workflowText) as { finalGate: { requiredTools: string[] } };
+    expect(workflowJson.finalGate.requiredTools).toContain("validate_composition");
   });
 
   it("prompts/list and prompts/get work over stdio", async () => {

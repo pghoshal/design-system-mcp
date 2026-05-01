@@ -117,6 +117,9 @@ export const UsageExampleSchema = z.object({
   language: z.string().min(1).max(32),
   code: z.string().min(1).max(50_000),
   description: z.string().optional(),
+  state: z.string().min(1).max(128).optional(),
+  controls: z.record(z.array(z.string().min(1).max(128))).optional(),
+  interactions: z.array(z.string().min(1).max(5_000)).optional(),
 });
 
 export const ComponentDependencySchema = z
@@ -145,6 +148,9 @@ export const ComponentPropSchema = z.object({
   description: z.string().optional(),
   values: z.array(z.string().min(1).max(128)).optional(),
   default: z.union([z.string(), z.number(), z.boolean()]).optional(),
+  deprecated: z.boolean().optional(),
+  replacedBy: z.string().min(1).max(128).optional(),
+  controlled: z.boolean().optional(),
 });
 
 export const DesignConstraintSchema = z

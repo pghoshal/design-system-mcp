@@ -38,6 +38,7 @@ export const handler: ToolHandler<typeof InspectCoverageInput, typeof InspectCov
       ...requiredTypeIssues(bundle, counts),
       ...emptyDeclaredTypeIssues(bundle, counts),
       ...componentIssues(bundle),
+      ...patternIssues(bundle),
       ...relationIssues(bundle),
     ];
     const filtered = args.include_warnings
@@ -139,6 +140,60 @@ function componentIssues(bundle: Bundle): CoverageIssue[] {
           "Component has no linked principles.",
         ),
       );
+    }
+    if (!Array.isArray(data.patterns) || data.patterns.length === 0) {
+      issues.push(
+        issue(
+          "component-orphan",
+          "warning",
+          entity,
+          "Component is not linked to any pattern, so composition recommendations may miss intended usage.",
+        ),
+      );
+    }
+  }
+  return issues;
+}
+
+function patternIssues(bundle: Bundle): CoverageIssue[] {
+  const issues: CoverageIssue[] = [];
+  for (const entity of bundle.entities.values()) {
+    if (entity.type !== "pattern") continue;
+    const contract = entity.data.contract as
+      | {
+          requiredComponents?: string[] | undefined;
+          optionalComponents?: string[] | undefined;
+          forbiddenComponents?: string[] | undefined;
+          requiredTokens?: string[] | undefined;
+          requiredPrinciples?: string[] | undefined;
+        }
+      | undefined;
+    if (!contract) {
+      issues.push(
+        issue(
+          "pattern-contract-missing",
+          "warning",
+          entity,
+          "Pattern has no machine-checkable contract for composition validation.",
+        ),
+      );
+      continue;
+    }
+    for (const id of [
+      ...(contract.requiredComponents ?? []),
+      ...(contract.optionalComponents ?? []),
+      ...(contract.forbiddenComponents ?? []),
+      ...(contract.requiredTokens ?? []),
+      ...(contract.requiredPrinciples ?? []),
+    ]) {
+      if (bundle.entities.has(id)) continue;
+      issues.push({
+        id: "pattern-contract-target-missing",
+        severity: "error",
+        entityId: entity.id,
+        type: entity.type,
+        message: `${entity.id} pattern contract references missing entity ${id}.`,
+      });
     }
   }
   return issues;

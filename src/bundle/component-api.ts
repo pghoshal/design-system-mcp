@@ -163,12 +163,17 @@ function readProps(
     const name = propName(ts, sourceFile, member.name);
     if (!name) continue;
     const type = member.type?.getText(sourceFile) ?? "unknown";
+    const jsDoc = parseJsDoc(ts, sourceFile, member);
     out.push({
       name,
       type,
       required: member.questionToken === undefined,
-      description: jsDocDescription(ts, sourceFile, member),
+      ...(jsDoc.description !== undefined ? { description: jsDoc.description } : {}),
       values: unionStringValues(ts, sourceFile, member.type),
+      ...(jsDoc.defaultValue !== undefined ? { default: jsDoc.defaultValue } : {}),
+      ...(jsDoc.deprecated ? { deprecated: true } : {}),
+      ...(jsDoc.replacedBy !== undefined ? { replacedBy: jsDoc.replacedBy } : {}),
+      ...(isControlledPropName(name) ? { controlled: true } : {}),
     });
   }
 
@@ -182,12 +187,17 @@ function propName(ts: TypeScriptModule, sourceFile: SourceFile, node: Node): str
   return text.length > 0 ? text : null;
 }
 
-function jsDocDescription(
+function parseJsDoc(
   ts: TypeScriptModule,
   sourceFile: SourceFile,
   node: Node,
-): string | undefined {
-  const docs = ts
+): {
+  description?: string | undefined;
+  defaultValue?: string | number | boolean | undefined;
+  deprecated: boolean;
+  replacedBy?: string | undefined;
+} {
+  const raw = ts
     .getJSDocCommentsAndTags(node)
     .map((doc) =>
       doc
@@ -198,7 +208,24 @@ function jsDocDescription(
         .trim(),
     )
     .filter(Boolean);
-  return docs[0] || undefined;
+  const text = raw.join("\n").trim();
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const descriptionLines = lines.filter((line) => !line.startsWith("@"));
+  const defaultLine = lines.find((line) => line.startsWith("@default"));
+  const deprecatedLine = lines.find((line) => line.startsWith("@deprecated"));
+  return {
+    description: descriptionLines.length > 0 ? descriptionLines.join(" ") : undefined,
+    defaultValue: defaultLine
+      ? parseDefaultValue(defaultLine.replace(/^@default\s*/, ""))
+      : undefined,
+    deprecated: deprecatedLine !== undefined,
+    ...(deprecatedLine !== undefined
+      ? { replacedBy: replacementFromDeprecated(deprecatedLine) }
+      : {}),
+  };
 }
 
 function unionStringValues(
@@ -222,4 +249,23 @@ function stringLiteralValue(text: string): string | null {
     return trimmed.slice(1, -1);
   }
   return null;
+}
+
+function parseDefaultValue(raw: string): string | number | boolean | undefined {
+  const value = raw.trim().replace(/[.;]$/, "");
+  if (!value) return undefined;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && /^-?\d+(?:\.\d+)?$/.test(value)) return numeric;
+  return value.replace(/^["']|["']$/g, "");
+}
+
+function replacementFromDeprecated(line: string): string | undefined {
+  const match = /\buse\s+([A-Za-z_$][\w$.-]*)\s+instead\b/i.exec(line);
+  return match?.[1];
+}
+
+function isControlledPropName(name: string): boolean {
+  return /^(value|checked|selected|open|expanded|active|pressed)$/i.test(name);
 }

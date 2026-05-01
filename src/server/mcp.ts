@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { ZodTypeAny } from "zod";
 import { handler as describeSchemaHandler } from "../tools/describe-schema.js";
+import { handler as explainDecisionHandler } from "../tools/explain-decision.js";
 import { handler as getEntityHandler } from "../tools/get-entity.js";
 import { handler as getRelatedHandler } from "../tools/get-related.js";
 import { handler as getUsageHandler } from "../tools/get-usage.js";
@@ -35,6 +36,7 @@ const TOOLS: ReadonlyArray<ToolHandler<any, any>> = [
   recommendCompositionHandler,
   validateCompositionHandler,
   inspectCoverageHandler,
+  explainDecisionHandler,
 ];
 
 export function buildMcpServer(opts: BuildServerOptions): McpServer {

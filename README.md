@@ -28,7 +28,7 @@ Implemented:
 - JSON regex validation rules
 - Component metadata ingestion from `components/*/component.json`
 - TypeScript component API parser for `*Props` interfaces and type literals
-- Storybook CSF story parser for canonical examples and variants
+- Storybook CSF story parser for canonical examples, variants, controls, and play-function interaction notes
 - Canonical usage examples, constraints, and prop metadata
 - Composition recommendation and composition/prop validation
 - Optional HTTP API-key auth
@@ -37,7 +37,8 @@ Implemented:
 - MCP resources for `design://manifest`, `design://schema`, `design://entity/{id}`, plus per-type templates `design://principle/{id}`, `design://pattern/{id}`, `design://component/{id}`, `design://prompt/{name}`
 - Operator runbook (`docs/runbook.md`), client setup guide (`docs/client-setup.md`), sample Fly + Kubernetes deployment manifests under `deploy/`
 - Performance baseline gates in CI (`tests/integration/perf-baseline.test.ts`) backed by the SLO table in `.claude/lld.md` §5.1
-- CI-friendly validation CLI (`pnpm validate -- --source <design-system-repo> <file...>`) with JSON output and nonzero exit on error violations
+- CI-friendly validation CLI (`pnpm validate -- --source <design-system-repo> <file...>`) with JSON/SARIF output, composition-plan validation, and nonzero exit on error violations
+- Machine-readable workflow contract at `design://workflow` for design-system-first agent harnesses
 
 ## Design Principles
 
@@ -274,9 +275,9 @@ Build a {{component_type}} using the design system.
 
 Component metadata lives in `components/<ComponentName>/component.json`. This gives agents stable imports, prop contracts, canonical examples, constraints, and relationships without requiring the MCP server to generate application code.
 
-When TypeScript source files are present beside `component.json`, the loader also reads the first matching `*Props` interface or type literal, preferring `<ComponentName>Props`. Extracted props are merged into the metadata. Hand-authored `component.json` values win when both sources define the same prop.
+When TypeScript source files are present beside `component.json`, the loader also reads the first matching `*Props` interface or type literal, preferring `<ComponentName>Props`. Extracted props include names, types, required flags, string-union values, JSDoc descriptions, `@default`, `@deprecated`, replacement hints, and simple controlled-state hints. Extracted props are merged into the metadata. Hand-authored `component.json` values win when both sources define the same prop.
 
-When Storybook CSF files such as `Card.stories.tsx` are present, object stories with literal `args` are converted into additional usage examples. This keeps `get_usage` aligned with existing component examples without executing Storybook.
+When Storybook CSF files such as `Card.stories.tsx` are present, object stories with literal `args` are converted into additional usage examples. The parser also carries literal `argTypes.options` as controls and stores `play` functions as interaction notes. This keeps `get_usage` aligned with existing component examples without executing Storybook.
 
 ```json
 {
@@ -509,6 +510,7 @@ The server exposes generic verbs:
 | `recommend_composition` | Return an implementation brief for a UI intent |
 | `validate_composition` | Validate planned components, props, patterns, and tokens before coding |
 | `inspect_coverage` | Report content coverage gaps before deterministic generation |
+| `explain_decision` | Explain a chosen entity with deterministic source, relation, and constraint evidence |
 
 Example `validate_ui` request:
 
@@ -532,6 +534,7 @@ Example `validate_ui` request:
 - `a11y-form-control-label` requires inputs, selects, and textareas to have labels or accessible names.
 - `a11y-no-positive-tabindex` blocks positive tab order overrides.
 - `a11y-no-autofocus` warns when markup uses autofocus.
+- `a11y-valid-aria-role` blocks invalid ARIA role names.
 - `copy-no-blame` blocks copy that blames the user.
 - `copy-no-hype` warns on hype, alarmism, and exclamation marks.
 - `copy-no-vague-actions` warns on vague action labels such as "Submit" or "Process".
@@ -614,9 +617,11 @@ Validate changed UI files against a local design-system source repo in CI:
 
 ```bash
 pnpm validate -- --source ./path/to/design-system src/App.tsx
+pnpm validate -- --source ./path/to/design-system --format sarif src/App.tsx > ds-results.sarif
+pnpm validate -- --source ./path/to/design-system --composition composition.json
 ```
 
-The command prints JSON and exits `1` if any error-severity `validate_ui` violation is found.
+The command prints JSON or SARIF and exits `1` if any error-severity `validate_ui` or `validate_composition` violation is found.
 
 This project follows test-first development for non-trivial changes. Read [.claude/tdd.md](./.claude/tdd.md) and [.claude/critic.md](./.claude/critic.md) before making behavioral changes.
 

@@ -6,7 +6,7 @@ Legend: ✅ implemented · 🟡 partial · ❌ missing
 
 ---
 
-## 1. Component API Parser — 🟡 partial
+## 1. Component API Parser — ✅ implemented
 
 `src/bundle/component-api.ts` (225 LOC) loads `typescript` dynamically and walks AST of `*.{ts,tsx,js,jsx}` files in each component dir to extract:
 
@@ -15,28 +15,29 @@ Legend: ✅ implemented · 🟡 partial · ❌ missing
 - ✅ required vs optional (`questionToken === undefined` → required)
 - ✅ JSDoc descriptions (`getJSDocCommentsAndTags`)
 - ✅ string-union variant values (`unionStringValues`)
-- ❌ default values
-- ❌ deprecated-prop tagging (no `@deprecated` JSDoc handling)
-- ❌ controlled vs uncontrolled detection
+- ✅ default values from `@default` JSDoc
+- ✅ deprecated-prop tagging from `@deprecated` JSDoc
+- ✅ replacement hints from `@deprecated Use <prop> instead`
+- ✅ controlled-state hints for common controlled prop names
 - ❌ component exports / package paths (those come from `component.json`, not the parser)
 
-**Status:** real AST parsing exists for props + variants. Defaults, deprecation, controlled-vs-uncontrolled are not parsed.
+**Status:** real AST parsing exists for props, variants, JSDoc descriptions/defaults/deprecation, and controlled-state hints. Package paths remain intentionally sourced from `component.json`.
 
 ---
 
-## 2. Storybook Parser — 🟡 partial
+## 2. Storybook Parser — ✅ implemented
 
 `src/bundle/storybook.ts` (223 LOC) walks `*.stories.{ts,tsx,js,jsx}` AST.
 
 - ✅ canonical examples (each `export const X = { ... }` → one `UsageExample`)
 - ✅ args extraction
 - ✅ variants from story names
-- ❌ states (no per-state extraction)
-- ❌ controls / `argTypes` (only flat args)
-- ❌ interaction examples (`play` functions not parsed)
+- ✅ states from story names
+- ✅ controls from literal `argTypes.options`
+- ✅ interaction examples (`play` functions stored as interaction notes)
 - ❌ visual edge cases (no screenshot or visual-regression hooks)
 
-**Status:** baseline CSF parsing for examples. Doesn't yet harvest controls or interaction tests.
+**Status:** CSF parsing covers examples, args, states, controls, and interaction notes without executing Storybook. Screenshot/visual-regression hooks remain out of scope for this server.
 
 ---
 
@@ -58,7 +59,7 @@ Legend: ✅ implemented · 🟡 partial · ❌ missing
 
 ## 4. Accessibility Rule Engine — ✅ implemented (deterministic, narrow)
 
-`src/validation/accessibility.ts` (286 LOC). Built-in rule IDs (`ACCESSIBILITY_RULE_IDS`):
+`src/validation/accessibility.ts`. Built-in rule IDs (`ACCESSIBILITY_RULE_IDS`):
 
 ```
 a11y-img-alt
@@ -67,17 +68,18 @@ a11y-link-name
 a11y-form-control-label
 a11y-no-positive-tabindex
 a11y-no-autofocus
+a11y-valid-aria-role
 ```
 
 - ✅ missing accessible labels (img alt, button/link name, form-control label)
 - ✅ positive tabindex
 - ✅ autoFocus
-- ❌ invalid ARIA roles
+- ✅ invalid ARIA roles
 - ❌ dialog focus / escape requirements
 - ❌ color-contrast token requirements
 - ❌ keyboard interaction requirements
 
-**Status:** 6 rules covering the most common WCAG-quick-wins. No ARIA-role taxonomy, no contrast checker, no dialog-focus rule.
+**Status:** deterministic rules cover common WCAG quick wins plus ARIA role validity. Dialog focus, contrast, and keyboard interaction rules remain future deeper checks.
 
 ---
 
@@ -149,7 +151,7 @@ constraints: Array<DesignConstraint{ id, severity, message, rationale? }>
 
 ---
 
-## 8. Design Brief / Harness Contract — 🟡 partial
+## 8. Design Brief / Harness Contract — ✅ implemented (server-side contract)
 
 The intended workflow is **described** by `recommend_composition`'s `nextSteps` output (`src/tools/recommend-composition.ts`):
 
@@ -162,11 +164,12 @@ Call validate_ui on generated code and repair all error violations.
 
 - ✅ tools exist that map to the steps (`describe_schema`, `recommend_composition`, `get_usage`, `resolve_token`, `validate_composition`, `validate_ui`)
 - ✅ `nextSteps` is a deterministic, machine-readable order
-- ❌ no enforced harness (the agent can skip steps; nothing blocks final output)
+- ✅ `design://workflow` packages the sequence, final gate, and CI commands as a machine-readable resource
+- 🟡 no enforced harness inside the MCP server (the agent can skip steps; client/CI must block final output)
 - ❌ no MCP prompt named e.g. `harness_workflow` that codifies the loop
 - ❌ no "repair until clean" loop tool
 
-**Status:** the building blocks are there; the deterministic workflow / harness is not yet packaged as a single resource or prompt.
+**Status:** the server now publishes a deterministic workflow contract. Hard enforcement remains a client/CI responsibility (#24).
 
 ---
 
@@ -187,9 +190,9 @@ design://prompt/{name}           template
 - ✅ design://manifest, design://schema, design://entity/{id}, design://component/{id}, design://pattern/{id}
 - ❌ design://tokens/{category} — explicitly excluded; tokens have a free-form dotted-path namespace (no stable categories). Use `design://entity/token:<dot.path>` or `resolve_token`. Documented in `.claude/flows.md` §3.
 - ❌ design://rules — not a resource yet
-- ❌ design://workflow — not a resource yet (the harness contract from #8)
+- ✅ design://workflow — handoff/harness contract from #8
 
-**Status:** all entity types are exposed; rules and workflow URIs are not.
+**Status:** all entity types and the workflow contract are exposed. `design://rules` remains a possible future resource.
 
 ---
 
@@ -208,30 +211,32 @@ design://prompt/{name}           template
 
 ---
 
-## 11. Similarity / Alternatives — 🟡 partial
+## 11. Similarity / Alternatives — ✅ implemented
 
-`src/tools/recommend-composition.ts` returns up to N components ranked by MiniSearch BM25 score, plus their constraints.
+`src/tools/recommend-composition.ts` returns up to N components ranked by MiniSearch BM25 score, plus constraints, explicit alternatives, and recommendation provenance.
 
 - ✅ ranking by intent + platform + framework (concatenated into the search query)
-- 🟡 "similar components" — implicit (top-N hits are functionally similar by score)
-- ❌ explicit "alternative components" relation
-- ❌ "deprecated → replacement" suggestion in this tool (the schema supports `status: deprecated` per component but no automatic replacement path)
-- ❌ "why this component, not that one" reasoning
-- ❌ explicit ranking by status (stable beats experimental beats deprecated)
+- ✅ explicit alternatives by type
+- ✅ alternatives are ranked by status and stable id ordering
+- ✅ recommendation provenance explains search matches and relation expansion
+- ✅ `explain_decision` gives deterministic source/relation/constraint evidence for a selected entity
+- ❌ deprecated → replacement suggestion in this tool (the schema supports `status: deprecated` per component but no automatic replacement path)
 
-**Status:** intent-driven ranking works. Alternatives, deprecation paths, and explanations don't.
+**Status:** intent-driven ranking, alternatives, and deterministic explanations are implemented. Deprecation replacement paths remain outside this feature.
 
 ---
 
-## 12. Deterministic Decision Explanations — ❌ missing
+## 12. Deterministic Decision Explanations — ✅ implemented
 
-There is no `explain_decision` tool, and no provenance trail attached to recommendations or violations beyond:
+`src/tools/explain-decision.ts` adds `explain_decision`, and `recommend_composition` now includes provenance for recommended entities.
 
-- `DesignConstraint.rationale` field exists in the schema (`src/bundle/schema.ts`) but is free-form text supplied by the source repo, not generated by the server
-- `get_usage` echoes constraints, including their rationale
-- Violations carry `ruleId` but not the source entity that motivated the rule
+- ✅ source-path evidence
+- ✅ relation evidence
+- ✅ constraint evidence
+- ✅ intent term overlap evidence
+- ✅ validation violations carry provenance for source-repo and built-in rules
 
-**Status:** not implemented as a first-class concept. Would require attaching `provenance: { entityId, ruleId, sourcePath }` to every violation and recommendation.
+**Status:** implemented as a first-class generic verb plus recommendation/violation provenance.
 
 ---
 
@@ -280,18 +285,18 @@ copy-no-destructive-hedging
 
 ---
 
-## 15. Design Decision Trace — 🟡 partial
+## 15. Design Decision Trace — ✅ implemented
 
-The repo now has a `provenance` payload on `validate_ui` violations:
+The repo now has provenance on both validation and recommendation surfaces:
 
 - ✅ source-repo regex rules include `rulePath`
 - ✅ built-in rules identify `ruleSource: "built-in"`
 - ✅ primitive token warnings link to the token entity + source path
 - ✅ copy/voice violations link to the loaded voice entity + source path
-- ❌ recommendations (`recommend_composition`) still return entities + constraints, not "why"
-- ❌ no relation-path trace yet for recommendations or composition validation
+- ✅ `recommend_composition` includes recommendation provenance with source path, reasons, and relation path
+- ✅ `explain_decision` exposes source, relation, match, and constraint evidence
 
-**Status:** implemented for `validate_ui` violations; still missing for recommendations and composition decisions.
+**Status:** implemented for validation and recommendation decisions. Composition-specific violation provenance can still deepen later.
 
 ---
 
@@ -318,18 +323,19 @@ ImportGuidanceSchema:       named, default?, namespace?, sideEffects, notes
 
 ---
 
-## 17. Deprecation and Migration — 🟡 partial
+## 17. Deprecation and Migration — 🟡 partial, improved
 
 The schema supports `status: "stable" | "experimental" | "deprecated"` on component metadata (`src/bundle/schema.ts`). Beyond that:
 
 - ✅ deprecated components flagged
-- ❌ deprecated **props** — no per-prop status field on `ComponentPropSchema`
+- ✅ deprecated **props** — `ComponentPropSchema` carries `deprecated` / `replacedBy`
+- ✅ `validate_composition` warns on deprecated prop usage and suggests replacements
 - ❌ deprecated **tokens** — no `deprecated` field on token entities
-- ❌ replacement IDs (no `replacedBy: string` field anywhere)
+- 🟡 replacement IDs exist for props, not components/tokens
 - ❌ migration examples (no schema for them)
 - ❌ hard errors for forbidden legacy usage (no rule enforces "do not import deprecated components")
 
-**Status:** component-level status flag only. No prop/token deprecation, no replacement chain, no enforcement.
+**Status:** component and prop deprecation are modeled enough for composition planning. Token/component replacement chains and migration examples remain open.
 
 ---
 
@@ -340,10 +346,10 @@ There is now a CLI path for invoking `validate_ui` outside MCP:
 - ✅ `pnpm validate` script in `package.json`
 - ✅ `src/validate-cli.ts` reads file(s), loads a local design-system source, invokes `validate_ui`, prints JSON, and exits `1` on error violations
 - ✅ integration coverage in `tests/integration/validate-cli.test.ts`
-- ❌ SARIF output mode
-- ❌ `validate_composition` batch mode
+- ✅ SARIF output mode for GitHub code-scanning integrations
+- ✅ `validate_composition` batch mode via `--composition <plan.json>`
 
-**Status:** JSON CI validation is implemented for generated UI files. SARIF and composition-plan batch validation remain open.
+**Status:** JSON/SARIF UI validation and JSON/SARIF composition-plan validation are implemented for CI.
 
 ---
 
@@ -355,9 +361,12 @@ There is now a CLI path for invoking `validate_ui` outside MCP:
 - ✅ missing related entity (`relation-target-missing`)
 - ✅ duplicate entity ids (handled at build time in `src/bundle/builder.ts:43-49` with `duplicates` warning)
 - ✅ component-side gaps (`component-import-missing`, `component-dependencies-empty`, `component-props-empty`, `component-examples-empty`, `component-principles-empty`)
+- ✅ orphan components (`component-orphan`)
+- ✅ missing pattern contracts (`pattern-contract-missing`)
+- ✅ missing pattern-contract targets (`pattern-contract-target-missing`)
 - 🟡 invalid token references — Style Dictionary throws on broken refs (`brokenReferences: "throw"` in `src/bundle/tokens.ts:42`); not surfaced through `inspect_coverage` separately
 - ❌ examples-compile sanity (no parser / type-checker on example code blocks)
-- ❌ orphan components / patterns (no "used by zero patterns" check)
+- 🟡 orphan patterns beyond missing contracts are not separately ranked
 - ❌ stale deprecated-replacement targets (deprecation isn't deeply modeled — see #17)
 
 **Status:** structural and metadata-completeness coverage is good. Deeper checks (compile, orphans, stale replacements) are not.
@@ -446,9 +455,9 @@ What is NOT yet schema'd:
 
 ---
 
-## 24. Harness-Enforced Modes — ❌ missing
+## 24. Harness-Enforced Modes — 🟡 partial (server-published, client-enforced)
 
-The repo has no mode flag, no state machine, no "agent must validate before final output" enforcement.
+The server publishes a machine-readable workflow contract at `design://workflow`, but it has no mode flag, state machine, or "agent must validate before final output" enforcement.
 
 The `recommend_composition` `nextSteps` output is **advisory** — the agent can ignore it. Nothing in this server forces:
 
@@ -458,9 +467,9 @@ The `recommend_composition` `nextSteps` output is **advisory** — the agent can
 - ❌ `repair` mode
 - ❌ `final_check` gate that blocks output until all error-severity violations are resolved
 
-This is a harness-side feature (the client / IDE / agent loop), not really a server-side feature. The MCP server can publish a workflow as a prompt / resource (#8), but it cannot enforce that an agent runs it.
+This is a harness-side feature (the client / IDE / agent loop), not really a server-side feature. The MCP server now publishes the workflow resource (#8), but it cannot enforce that an agent runs it.
 
-**Status:** not implemented and arguably not implementable from inside the MCP server alone — needs a client-side or harness-side enforcement layer.
+**Status:** server-side contract is implemented; blocking enforcement needs a client-side or harness-side layer.
 
 ---
 
@@ -468,38 +477,37 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 
 | # | Feature | Status |
 |---|---|---|
-| 1 | Component API parser | 🟡 partial (props + variants AST; no defaults, no @deprecated, no controlled detection) |
-| 2 | Storybook parser | 🟡 partial (examples + args; no controls, no play, no states) |
+| 1 | Component API parser | ✅ props + variants + defaults + @deprecated + controlled hints |
+| 2 | Storybook parser | ✅ examples + args + controls + play notes + states |
 | 3 | MDX documentation parser | 🟡 partial (search-clean body; no structured do/don't / tables) |
-| 4 | Accessibility rule engine | ✅ 6 rules (no ARIA roles, dialog focus, contrast) |
+| 4 | Accessibility rule engine | ✅ 7 rules (ARIA roles included; no dialog focus / contrast) |
 | 5 | Semantic token validator | ✅ 4 rules (no category enforcement, no per-component allowlists) |
 | 6 | Composition validator v2 | 🟡 partial (structural; no ordering / state / platform) |
 | 7 | Pattern contract schema | ✅ structural shape (no interaction / copy / a11y fields) |
-| 8 | Design brief / harness contract | 🟡 advisory `nextSteps`; no enforced workflow prompt/resource |
-| 9 | MCP resources | ✅ all entity types + per-type templates (no `tokens/{category}`, `rules`, `workflow`) |
+| 8 | Design brief / harness contract | ✅ `nextSteps` plus `design://workflow`; enforcement is harness-side |
+| 9 | MCP resources | ✅ all entity types + per-type templates + `design://workflow` |
 | 10 | MCP prompts | 🟡 wiring complete; only one starter prompt in fixture |
-| 11 | Similarity / alternatives | 🟡 BM25 ranking; no explicit alternatives or "why-not" |
-| 12 | Deterministic decision explanations | ❌ no `explain_decision` tool, no provenance |
+| 11 | Similarity / alternatives | ✅ explicit alternatives + provenance |
+| 12 | Deterministic decision explanations | ✅ `explain_decision` tool |
 | 13 | Violation repair suggestions | 🟡 structured payload exists for selected rules; no before/after snippets |
 | 14 | Copy / voice validator | ✅ 4 rules (no glossary / reading-level / per-surface tone) |
-| 15 | Design decision trace | 🟡 provenance exists on validate_ui; no recommendation trace yet |
+| 15 | Design decision trace | ✅ validation + recommendation provenance |
 | 16 | Component dependency / import guidance | ✅ schema'd; surfaced via `get_usage` |
-| 17 | Deprecation and migration | 🟡 component `status` only; no prop / token deprecation, no `replacedBy` |
-| 18 | CI / PR validation mode | 🟡 JSON validate_ui CLI exists; no SARIF / composition batch |
-| 19 | Bundle quality checks | 🟡 structural + metadata coverage via `inspect_coverage`; no orphan / compile / stale-replacement |
+| 17 | Deprecation and migration | 🟡 component + prop deprecation; no token/component replacement chains |
+| 18 | CI / PR validation mode | ✅ JSON/SARIF validate_ui + composition batch CLI |
+| 19 | Bundle quality checks | 🟡 structural + metadata + orphan/contract coverage; no example compile / stale replacement |
 | 20 | Framework adapters | 🟡 language flag covers tsx/jsx/ts/js/css/html/vue (no React Native; no per-framework AST) |
 | 21 | AST-based validation rules | ❌ regex-only `RuleDetector`; AST is build-time only |
-| 22 | Design-system coverage report | 🟡 component-side coverage via `inspect_coverage`; no token-usage / orphan checks |
+| 22 | Design-system coverage report | 🟡 component-side + orphan coverage via `inspect_coverage`; token-usage still shallow |
 | 23 | Strict schema specs | 🟡 strong for component / pattern / rule; weak for token / migration / platform |
-| 24 | Harness-enforced modes | ❌ server can advise (`nextSteps`), cannot enforce |
+| 24 | Harness-enforced modes | 🟡 `design://workflow` published; hard blocking remains client-side |
 
-**Tally:** 6 ✅ · 15 🟡 · 3 ❌ (out of 24).
+**Tally:** 13 ✅ · 10 🟡 · 1 ❌ (out of 24).
 
-The missing/major-gap set (12, 21, 24, plus the remaining recommendation side of 15 and SARIF/composition side of 18) clusters into three real gaps:
+The remaining major-gap set clusters into two real gaps:
 
-- **Provenance & explanations** (12, remaining 15) — `validate_ui` violations now have provenance; recommendations still need a trace, then an `explain_decision` tool/resource can be built.
 - **AST-based rules** (21) — `RuleDetector` union extension to `RegexDetector | AstDetector | PluginDetector`, then per-language adapters. Real engineering work.
-- **CI mode + harness enforcement** (remaining 18, 24) — JSON `validate_ui` CLI exists; SARIF/composition mode and harness enforcement are still open.
+- **Harness hard enforcement** (24) — server-side workflow resource exists; the blocking loop belongs in the client/CI harness.
 
 The 13 partials are mostly "the surface exists but the depth doesn't" — rules can be added (each is ~20-40 LOC), schema fields can be extended.
 
@@ -507,22 +515,17 @@ For each item that's worth promoting from 🟡 to ✅, the cheapest path is:
 
 | Promote | Approach |
 |---|---|
-| #1 Component API → defaults | Add a value-extractor in `component-api.ts:readProps` for `member.initializer` (when `PropertySignature` is in a `ParameterDeclaration`-like position) |
-| #4 Accessibility → +ARIA roles + dialog | Add 2-3 more rule entries to `accessibility.ts` |
+| #4 Accessibility → dialog / contrast | Add dialog focus/escape and token-based contrast rules to `accessibility.ts` |
 | #5 Tokens → category enforcement | Add a 5th rule keyed off the token's `$type` field |
 | #7 Pattern contract → +copy + interaction | Extend `PatternContractSchema` with `copyRules: string[]`, `interactionRules: string[]` |
-| #11 Alternatives | Add a `findAlternatives(entity)` helper that walks `related` + same-type ranked-by-status |
 | #13 Repair → structured | Extend `replaceWith` coverage and add before/after snippets where fixes are deterministic |
-| #17 Deprecation → tokens + props | Add `deprecated?: { since?, replacedBy? }` to `ComponentPropSchema` and to token entities |
-| #18 CI mode | Add SARIF output and optional `validate_composition` batch input |
-| #22 Coverage → orphan + token-usage | New checks in `inspect-coverage.ts` |
+| #17 Deprecation → tokens + component replacement | Add replacement fields to component/token schemas and migration examples |
+| #22 Coverage → token-usage | Add unused-token and deprecated-token target checks in `inspect-coverage.ts` |
 
 If you want any of these landed, the cheapest 5 in priority order would be:
 
-1. **#18 CI / PR validation mode** — JSON CLI is in; next value is SARIF output for GitHub code scanning plus optional composition-plan validation.
+1. **#18 CI / PR validation mode** — JSON/SARIF CLI is in; next value is optional composition-plan validation.
 2. **#13 Structured repair suggestions** — extend `replaceWith` beyond autofocus and add before/after snippets.
-3. **#11 Explicit alternatives** — improves agent decision quality; small change to `recommend_composition`.
-4. **#15 Recommendation provenance** — add trace payloads to `recommend_composition`; needed before #12 explain_decision can cover decisions.
-5. **#21 AST detector kind** — biggest engineering investment of the bunch but unblocks deeper validation of token-usage-in-JSX, controlled-vs-uncontrolled, etc.
+3. **#21 AST detector kind** — biggest engineering investment of the bunch but unblocks deeper validation of token-usage-in-JSX, controlled-vs-uncontrolled, etc.
 
 Each is a discrete slice that fits a TDD-RED→GREEN→Critic cycle.

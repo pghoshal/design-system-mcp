@@ -134,6 +134,7 @@ describe("Phase 2 — HTTP transport", () => {
       expect(names).toContain("recommend_composition");
       expect(names).toContain("validate_composition");
       expect(names).toContain("inspect_coverage");
+      expect(names).toContain("explain_decision");
 
       const result = await client.callTool({
         name: "describe_schema",
@@ -228,6 +229,7 @@ describe("Phase 2 — HTTP transport", () => {
       const uris = list.resources.map((r) => r.uri);
       expect(uris).toContain("design://manifest");
       expect(uris).toContain("design://schema");
+      expect(uris).toContain("design://workflow");
 
       const manifest = await client.readResource({ uri: "design://manifest" });
       expect(manifest.contents.length).toBeGreaterThan(0);
@@ -242,6 +244,20 @@ describe("Phase 2 — HTTP transport", () => {
 
       const schema = await client.readResource({ uri: "design://schema" });
       expect(schema.contents[0]?.mimeType).toBe("application/json");
+
+      const workflow = await client.readResource({ uri: "design://workflow" });
+      const workflowText =
+        workflow.contents[0] && "text" in workflow.contents[0]
+          ? (workflow.contents[0].text as string)
+          : "";
+      const workflowJson = JSON.parse(workflowText) as {
+        mode: string;
+        requiredSequence: string[];
+        finalGate: { requiredTools: string[] };
+      };
+      expect(workflowJson.mode).toBe("design-system-first");
+      expect(workflowJson.requiredSequence).toContain("recommend_composition");
+      expect(workflowJson.finalGate.requiredTools).toContain("validate_ui");
 
       const entity = await client.readResource({ uri: "design://entity/principle:clarity" });
       const body = entity.contents[0];
