@@ -18,8 +18,21 @@ const MD_SOURCES: readonly MdSourceConfig[] = [
   { dir: "docs/conventions", defaultType: "convention" },
 ];
 
+export const COMMUNITY_DOC_FILE_NAMES = new Set([
+  "getdesign.md",
+  "getdesign.mdx",
+  "design-system.md",
+  "design-system.mdx",
+  "design.md",
+  "design.mdx",
+  "styleguide.md",
+  "styleguide.mdx",
+  "guidelines.md",
+  "guidelines.mdx",
+]);
+
 /**
- * Loads markdown content from canonical doc directories into entities.
+ * Loads markdown content from canonical doc directories and community root docs into entities.
  * - frontmatter `id`, `type`, `summary`, `tags` override defaults
  * - id defaults to `<type>:<filename-without-ext>`
  * - summary defaults to first non-heading paragraph (trimmed) or filename
@@ -37,6 +50,8 @@ export async function loadMarkdown(repoPath: string, logger: Logger): Promise<En
     }
   }
 
+  entities.push(...(await loadCommunityDocs(repoPath, logger)));
+
   // voice-and-tone.md — single file mapped to one voice entity (top-level summary)
   const voicePath = path.join(repoPath, "docs/voice-and-tone.md");
   if (await fileExists(voicePath)) {
@@ -46,6 +61,31 @@ export async function loadMarkdown(repoPath: string, logger: Logger): Promise<En
 
   logger.info({ count: entities.length }, "loaded markdown entities");
   return entities;
+}
+
+async function loadCommunityDocs(repoPath: string, logger: Logger): Promise<Entity[]> {
+  const entries = await fs.readdir(repoPath, { withFileTypes: true }).catch(() => []);
+  const entities: Entity[] = [];
+
+  for (const ent of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    if (!ent.isFile() || !isDocFileName(ent.name)) continue;
+
+    const filePath = path.join(repoPath, ent.name);
+    if (!(await shouldLoadCommunityDoc(filePath, ent.name))) continue;
+
+    const entity = await readMdEntity(filePath, repoPath, "convention", logger);
+    if (entity) entities.push(entity);
+  }
+
+  return entities;
+}
+
+async function shouldLoadCommunityDoc(filePath: string, fileName: string): Promise<boolean> {
+  if (COMMUNITY_DOC_FILE_NAMES.has(fileName.toLowerCase())) return true;
+
+  const raw = await fs.readFile(filePath, "utf8");
+  const { data } = matter(raw);
+  return typeof data.id === "string" || typeof data.type === "string" || isRecord(data.tokens);
 }
 
 async function readMdEntity(
@@ -168,10 +208,7 @@ async function listDocFiles(dir: string): Promise<string[]> {
     const full = path.join(dir, ent.name);
     if (ent.isDirectory()) {
       out.push(...(await listDocFiles(full)));
-    } else if (
-      ent.isFile() &&
-      (ent.name.endsWith(".md") || ent.name.endsWith(".mdx") || ent.name.endsWith(".prompt.md"))
-    ) {
+    } else if (ent.isFile() && isDocFileName(ent.name)) {
       out.push(full);
     }
   }
@@ -190,6 +227,18 @@ async function listPromptFiles(dir: string): Promise<string[]> {
     }
   }
   return out;
+}
+
+export function isDocFileName(fileName: string): boolean {
+  return (
+    (fileName.endsWith(".md") || fileName.endsWith(".mdx")) &&
+    !fileName.endsWith(".prompt.md") &&
+    !fileName.endsWith(".prompt.mdx")
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function normalizeMarkdownBody(content: string, isMdx: boolean): string {

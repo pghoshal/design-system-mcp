@@ -103,6 +103,35 @@ describe("Phase 1 — local mode integration", () => {
       );
       expect(r.hits[0]?.id).toBe("convention:forms");
     });
+
+    it("indexes community root markdown docs such as getdesign.md", async () => {
+      const r = await searchHandler.handle(
+        { query: "Community Handoff", type: "convention", limit: 5, offset: 0 },
+        ctx(),
+      );
+      expect(r.hits.map((hit) => hit.id)).toContain("convention:getdesign");
+    });
+
+    it("loads opt-in root markdown and ignores loose root notes", async () => {
+      const optIn = await searchHandler.handle(
+        { query: "compact density", type: "convention", limit: 5, offset: 0 },
+        ctx(),
+      );
+      expect(optIn.hits.map((hit) => hit.id)).toContain("convention:custom-handoff");
+
+      const loose = await searchHandler.handle(
+        { query: "should not become a design-system entity", limit: 5, offset: 0 },
+        ctx(),
+      );
+      expect(loose.hits.map((hit) => hit.id)).not.toContain("convention:loose-notes");
+      expect(manager.current().entities.has("prompt:root_prompt_should_not_load")).toBe(false);
+      expect(manager.current().entities.has("convention:root.prompt")).toBe(false);
+      expect(
+        [...manager.current().entities.values()].some(
+          (entity) => entity.source.path === "root.prompt.md",
+        ),
+      ).toBe(false);
+    });
   });
 
   describe("get_entity", () => {
@@ -152,6 +181,17 @@ describe("Phase 1 — local mode integration", () => {
       expect(r.entity.data.body).not.toContain("<DoDont");
       expect((r.related ?? []).map((e) => e.id)).toContain("principle:clarity");
       expect((r.related ?? []).map((e) => e.id)).toContain("component:button");
+    });
+
+    it("returns community root markdown docs with resolved relations", async () => {
+      const r = await getEntityHandler.handle(
+        { id: "convention:getdesign", resolve_relations: true },
+        ctx(),
+      );
+      expect(r.entity.source.path).toBe("getdesign.md");
+      expect(r.entity.data.body).toContain("Deterministic token resolution");
+      expect((r.related ?? []).map((e) => e.id)).toContain("component:button");
+      expect((r.related ?? []).map((e) => e.id)).toContain("token:color.action.primary");
     });
 
     it("does not load prompt MDX files", async () => {
@@ -282,6 +322,31 @@ describe("Phase 1 — local mode integration", () => {
       );
       const md = r.matches.find((m) => m.id === "token:spacing.md");
       expect(md?.value).toBe("Tokens.spacing.md");
+    });
+
+    it("resolves tokens defined in community markdown frontmatter through Style Dictionary", async () => {
+      const r = await resolveHandler.handle(
+        { query: "community accent", platform: "raw", limit: 5 },
+        ctx(),
+      );
+      const accent = r.matches.find((m) => m.id === "token:color.community.accent");
+      const hover = r.matches.find((m) => m.id === "token:color.community.accentHover");
+      expect(accent?.rawValue).toBe("#7C3AED");
+      expect(hover?.rawValue).toBe("#7C3AED");
+
+      const entity = await getEntityHandler.handle(
+        { id: "token:color.community.accent", resolve_relations: false },
+        ctx(),
+      );
+      expect(entity.entity.source.path).toBe("getdesign.md");
+    });
+
+    it("does not create tokens from markdown prose tables", async () => {
+      const r = await resolveHandler.handle(
+        { query: "prose tableOnly", platform: "raw", limit: 5 },
+        ctx(),
+      );
+      expect(r.matches.map((match) => match.id)).not.toContain("token:color.prose.tableOnly");
     });
   });
 

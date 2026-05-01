@@ -104,6 +104,7 @@ The design-system source repo (a separate repo, not this one) is structured as:
 
 ```
 design-system/                          # private GitHub repo
+├── getdesign.md                         # optional community UX-to-dev handoff doc + frontmatter tokens
 ├── tokens/
 │   ├── core.tokens.json                # DTCG primitives
 │   ├── semantic.tokens.json            # aliases
@@ -380,6 +381,7 @@ Completed in the first Phase 4 slice above. Remaining hardening:
 - Implemented: dependency/import guidance per component package
 - Implemented: deterministic relation inference from explicit entity-id references
 - Implemented: schema/content coverage inspection for deterministic generation readiness
+- Implemented: community root Markdown compatibility for handoff docs and frontmatter tokens such as `getdesign.md` / `design.md`
 - Harness workflow docs: discover → recommend → fetch usage → validate composition → generate → validate UI → repair
 
 ### Future (not committed)

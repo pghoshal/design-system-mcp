@@ -117,6 +117,7 @@ The server reads a separate design-system content repo. A minimal source repo lo
 ```text
 design-system/
   manifest.json
+  getdesign.md
   tokens/
     core.tokens.json
     semantic.tokens.json
@@ -188,6 +189,27 @@ Tokens use DTCG-style JSON and are resolved through Style Dictionary.
 }
 ```
 
+Community Markdown can also define tokens in YAML frontmatter under `tokens:`. The server normalizes `value`, `type`, and `description` to DTCG `$value`, `$type`, and `$description`, then feeds the result through Style Dictionary with any `tokens/*.tokens.json` files. This supports Markdown-only repos and hybrid token+Markdown repos while keeping `resolve_token`, `validate_ui`, and `validate_composition` deterministic.
+
+```markdown
+---
+tokens:
+  color:
+    brand:
+      primary:
+        value: "#2563EB"
+        type: color
+        description: Primary brand action.
+      primaryHover:
+        value: "{color.brand.primary}"
+        type: color
+---
+
+# Design System
+```
+
+Token tables in Markdown prose are searchable guidance only. For machine-readable token resolution, put token data in Markdown frontmatter `tokens:` or in `tokens/*.tokens.json`.
+
 ### Markdown Docs
 
 Docs use YAML frontmatter plus Markdown or MDX body:
@@ -209,6 +231,8 @@ Use plain language and obvious affordances.
 Pattern docs can also include a machine-checkable `contract` in frontmatter. `validate_composition` enforces this before code generation.
 
 MDX files are supported in `docs/principles`, `docs/patterns`, and `docs/conventions`. The loader keeps frontmatter and prose searchable while stripping imports, exports, and component-only JSX from the indexed body.
+
+Community-published root docs are also supported for UX-to-dev handoff. Root files named `getdesign.md`, `design-system.md`, `design.md`, `styleguide.md`, or `guidelines.md` are loaded as `convention` entities by default; root Markdown/MDX files with frontmatter `id`, `type`, or `tokens` are loaded too. This makes public/community formats searchable without adding content-specific MCP tools.
 
 Docs and metadata may also reference entity ids directly, such as `component:button` or `token:color.action.primary`. The bundle infers deterministic `references` relations from those explicit ids, so `get_related` can walk the graph even when frontmatter did not include a manual `related` entry.
 
