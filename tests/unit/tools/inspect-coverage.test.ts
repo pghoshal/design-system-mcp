@@ -277,4 +277,241 @@ describe("inspect_coverage", () => {
       }),
     );
   });
+
+  it("reports unused tokens and deprecated token references", async () => {
+    const bundle = {
+      version: "test",
+      schema: {
+        types: {
+          token: { searchable: ["summary"] },
+          component: { searchable: ["summary"] },
+          pattern: { searchable: ["summary"] },
+          principle: { searchable: ["summary"] },
+          voice: { searchable: ["summary"] },
+        },
+      },
+      entities: new Map([
+        [
+          "token:color.used",
+          {
+            id: "token:color.used",
+            type: "token",
+            summary: "Used token",
+            tags: [],
+            data: {},
+            source: { path: "tokens/semantic.tokens.json" },
+          },
+        ],
+        [
+          "token:color.deprecated",
+          {
+            id: "token:color.deprecated",
+            type: "token",
+            summary: "Deprecated token",
+            tags: [],
+            data: { deprecated: true, replacement: "token:color.used" },
+            source: { path: "tokens/semantic.tokens.json" },
+          },
+        ],
+        [
+          "token:color.unused",
+          {
+            id: "token:color.unused",
+            type: "token",
+            summary: "Unused token",
+            tags: [],
+            data: {},
+            source: { path: "tokens/semantic.tokens.json" },
+          },
+        ],
+        [
+          "principle:clarity",
+          {
+            id: "principle:clarity",
+            type: "principle",
+            summary: "Clarity",
+            tags: [],
+            data: {},
+            source: { path: "docs/principles/clarity.md" },
+          },
+        ],
+        [
+          "voice:default",
+          {
+            id: "voice:default",
+            type: "voice",
+            summary: "Voice",
+            tags: [],
+            data: {},
+            source: { path: "docs/voice-and-tone.md" },
+          },
+        ],
+        [
+          "component:button",
+          {
+            id: "component:button",
+            type: "component",
+            summary: "Button",
+            tags: [],
+            data: {
+              importPath: "@acme/ui/button",
+              dependencies: [{ package: "@acme/ui", type: "runtime" }],
+              props: [{ name: "label", type: "string", required: false }],
+              examples: [{ name: "Button", language: "tsx", code: "<Button />" }],
+              constraints: [{ id: "button-label", severity: "error", message: "Use labels." }],
+              principles: ["principle:clarity"],
+              patterns: ["pattern:confirmation-dialog"],
+              tokens: ["token:color.used", "token:color.deprecated"],
+            },
+            source: { path: "components/Button/component.json" },
+          },
+        ],
+        [
+          "pattern:confirmation-dialog",
+          {
+            id: "pattern:confirmation-dialog",
+            type: "pattern",
+            summary: "Pattern",
+            tags: [],
+            data: { contract: { requiredTokens: ["token:color.used"] } },
+            source: { path: "docs/patterns/confirmation-dialog.md" },
+          },
+        ],
+      ]),
+    };
+    const ctx = {
+      source: { current: () => bundle },
+      cache: new LayeredCache(),
+      logger,
+      requestId: "test",
+    };
+
+    const r = await handler.handle({ include_warnings: true }, ctx as never);
+
+    expect(r.ok).toBe(false);
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({
+        id: "deprecated-token-referenced",
+        severity: "error",
+        entityId: "token:color.deprecated",
+      }),
+    );
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({
+        id: "token-unused",
+        severity: "warning",
+        entityId: "token:color.unused",
+      }),
+    );
+  });
+
+  it("treats token aliases as token usage and reports missing component constraints", async () => {
+    const bundle = {
+      version: "test",
+      schema: {
+        types: {
+          token: { searchable: ["summary"] },
+          component: { searchable: ["summary"] },
+          pattern: { searchable: ["summary"] },
+          principle: { searchable: ["summary"] },
+          voice: { searchable: ["summary"] },
+        },
+      },
+      entities: new Map([
+        [
+          "token:color.blue.500",
+          {
+            id: "token:color.blue.500",
+            type: "token",
+            summary: "Blue",
+            tags: [],
+            data: { original: "#2563EB" },
+            source: { path: "tokens/core.tokens.json" },
+          },
+        ],
+        [
+          "token:color.action.primary",
+          {
+            id: "token:color.action.primary",
+            type: "token",
+            summary: "Primary",
+            tags: [],
+            data: { original: "{color.blue.500}" },
+            source: { path: "tokens/semantic.tokens.json" },
+          },
+        ],
+        [
+          "principle:clarity",
+          {
+            id: "principle:clarity",
+            type: "principle",
+            summary: "Clarity",
+            tags: [],
+            data: {},
+            source: { path: "docs/principles/clarity.md" },
+          },
+        ],
+        [
+          "voice:default",
+          {
+            id: "voice:default",
+            type: "voice",
+            summary: "Voice",
+            tags: [],
+            data: {},
+            source: { path: "docs/voice-and-tone.md" },
+          },
+        ],
+        [
+          "component:button",
+          {
+            id: "component:button",
+            type: "component",
+            summary: "Button",
+            tags: [],
+            data: {
+              importPath: "@acme/ui/button",
+              dependencies: [{ package: "@acme/ui", type: "runtime" }],
+              props: [{ name: "label", type: "string", required: false }],
+              examples: [{ name: "Button", language: "tsx", code: "<Button />" }],
+              principles: ["principle:clarity"],
+              patterns: ["pattern:confirmation-dialog"],
+              tokens: ["token:color.action.primary"],
+            },
+            source: { path: "components/Button/component.json" },
+          },
+        ],
+        [
+          "pattern:confirmation-dialog",
+          {
+            id: "pattern:confirmation-dialog",
+            type: "pattern",
+            summary: "Pattern",
+            tags: [],
+            data: { contract: { requiredTokens: ["token:color.action.primary"] } },
+            source: { path: "docs/patterns/confirmation-dialog.md" },
+          },
+        ],
+      ]),
+    };
+    const ctx = {
+      source: { current: () => bundle },
+      cache: new LayeredCache(),
+      logger,
+      requestId: "test",
+    };
+
+    const r = await handler.handle({ include_warnings: true }, ctx as never);
+
+    expect(r.issues).not.toContainEqual(
+      expect.objectContaining({ id: "token-unused", entityId: "token:color.blue.500" }),
+    );
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({
+        id: "component-constraints-empty",
+        severity: "warning",
+        entityId: "component:button",
+      }),
+    );
+  });
 });

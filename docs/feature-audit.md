@@ -420,20 +420,21 @@ export type RuleDetector = RegexDetector | JsxPropValueDetector;
 
 ---
 
-## 22. Design-System Coverage Report — 🟡 partial
+## 22. Design-System Coverage Report — ✅ implemented
 
 The `inspect_coverage` tool answers part of this:
 
 - ✅ which components lack examples / constraints / principles / props / dependencies
 - ✅ which schema types are declared but empty
 - ✅ which entities reference missing relation targets
-- ❌ which tokens are unused (no token-usage scan)
+- ✅ which tokens are unused (`token-unused`)
+- ✅ which deprecated tokens are still referenced (`deprecated-token-referenced`)
 - ✅ which patterns lack validation contracts (`pattern-contract-missing`)
 - ✅ orphan components (`component-orphan`)
-- 🟡 broader relation-graph orphan reporting remains shallow
-- ❌ which schemas are incomplete in deeper senses (e.g., a component declares a prop that no example uses)
+- ✅ missing pattern/contract/component replacement targets
+- ✅ invalid prop targets in pattern contracts
 
-**Status:** the existing tool is the closest analogue to a coverage report; deeper graph checks are not.
+**Status:** `inspect_coverage` now covers core entity completeness, relation integrity, component metadata, pattern contracts, replacement integrity, and token usage/deprecation coverage.
 
 ---
 
@@ -504,11 +505,11 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 | 19 | Bundle quality checks | 🟡 structural + metadata + orphan/contract coverage; no example compile / stale replacement |
 | 20 | Framework adapters | 🟡 language flag covers tsx/jsx/ts/js/css/html/vue (no React Native; no per-framework AST) |
 | 21 | AST-based validation rules | ✅ JSX prop value detector; className/token AST rules remain future depth |
-| 22 | Design-system coverage report | 🟡 component-side + orphan + missing-contract coverage; token-usage still shallow |
+| 22 | Design-system coverage report | ✅ component + relation + contract + replacement + token usage coverage |
 | 23 | Strict schema specs | 🟡 strong for component / pattern / rule; weak for token / migration / platform |
 | 24 | Harness-enforced modes | 🟡 `design://workflow` published; hard blocking remains client-side |
 
-**Tally:** 19 ✅ · 5 🟡 · 0 ❌ (out of 24).
+**Tally:** 20 ✅ · 4 🟡 · 0 ❌ (out of 24).
 
 The remaining major-gap set has no fully missing server-side item. The hard parts left are depth expansions:
 
@@ -524,12 +525,11 @@ For each item that's worth promoting from 🟡 to ✅, the cheapest path is:
 | #4 Accessibility → dialog / contrast | Add dialog focus/escape and token-based contrast rules to `accessibility.ts` |
 | #5 Tokens → category enforcement | Add a rule keyed off the token's `$type` field |
 | #7 Pattern contract → +copy + interaction | Extend `PatternContractSchema` with `copyRules: string[]`, `interactionRules: string[]` |
-| #22 Coverage → token-usage | Add unused-token and deprecated-token target checks in `inspect-coverage.ts` |
 
 If you want any of these landed, the cheapest 5 in priority order would be:
 
 1. **#5 Semantic token category enforcement** — detect color tokens in spacing/layout slots and spacing tokens in color slots.
 2. **#19 Bundle quality checks** — add example compile sanity checks.
-3. **#22 Coverage report** — add unused-token and deprecated-token target checks.
+3. **#23 Strict schema specs** — add token entity and platform-mapping schema depth.
 
 Each is a discrete slice that fits a TDD-RED→GREEN→Critic cycle.

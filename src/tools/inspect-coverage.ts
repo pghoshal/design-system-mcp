@@ -39,6 +39,7 @@ export const handler: ToolHandler<typeof InspectCoverageInput, typeof InspectCov
       ...emptyDeclaredTypeIssues(bundle, counts),
       ...componentIssues(bundle),
       ...patternIssues(bundle),
+      ...tokenIssues(bundle),
       ...relationIssues(bundle),
     ];
     const filtered = args.include_warnings
@@ -129,6 +130,16 @@ function componentIssues(bundle: Bundle): CoverageIssue[] {
     if (!Array.isArray(data.examples) || data.examples.length === 0) {
       issues.push(
         issue("component-examples-empty", "warning", entity, "Component has no usage examples."),
+      );
+    }
+    if (!Array.isArray(data.constraints) || data.constraints.length === 0) {
+      issues.push(
+        issue(
+          "component-constraints-empty",
+          "warning",
+          entity,
+          "Component has no machine-readable constraints.",
+        ),
       );
     }
     if (!Array.isArray(data.principles) || data.principles.length === 0) {
@@ -274,6 +285,76 @@ function patternIssues(bundle: Bundle): CoverageIssue[] {
     }
   }
   return issues;
+}
+
+function tokenIssues(bundle: Bundle): CoverageIssue[] {
+  const issues: CoverageIssue[] = [];
+  const used = referencedTokenIds(bundle);
+
+  for (const entity of bundle.entities.values()) {
+    if (entity.type !== "token") continue;
+    if (used.has(entity.id) && isDeprecatedToken(entity)) {
+      issues.push({
+        id: "deprecated-token-referenced",
+        severity: "error",
+        entityId: entity.id,
+        type: entity.type,
+        message: `${entity.id} is deprecated but still referenced by component or pattern metadata.`,
+      });
+      continue;
+    }
+    if (!used.has(entity.id) && !isDeprecatedToken(entity)) {
+      issues.push({
+        id: "token-unused",
+        severity: "warning",
+        entityId: entity.id,
+        type: entity.type,
+        message: `${entity.id} is not referenced by component metadata or pattern contracts.`,
+      });
+    }
+  }
+
+  return issues;
+}
+
+function referencedTokenIds(bundle: Bundle): Set<string> {
+  const used = new Set<string>();
+  for (const entity of bundle.entities.values()) {
+    const data = entity.data;
+    if (entity.type === "token") {
+      for (const id of tokenReferenceIds(data.original)) used.add(id);
+    }
+    if (entity.type === "component" && Array.isArray(data.tokens)) {
+      for (const id of data.tokens) if (typeof id === "string") used.add(id);
+    }
+    if (entity.type === "pattern") {
+      const contract = data.contract as
+        | {
+            requiredTokens?: string[] | undefined;
+            platformRequirements?: Array<{ requiredTokens?: string[] | undefined }> | undefined;
+          }
+        | undefined;
+      for (const id of contract?.requiredTokens ?? []) used.add(id);
+      for (const requirement of contract?.platformRequirements ?? []) {
+        for (const id of requirement.requiredTokens ?? []) used.add(id);
+      }
+    }
+  }
+  return used;
+}
+
+function tokenReferenceIds(value: unknown): string[] {
+  if (typeof value !== "string") return [];
+  const refs = value.match(/\{[^}]+\}/g) ?? [];
+  return refs.map((ref) => `token:${ref.slice(1, -1)}`);
+}
+
+function isDeprecatedToken(entity: Entity): boolean {
+  const value = entity.data.deprecated;
+  if (value === true) return true;
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized.length > 0 && normalized !== "false";
 }
 
 function relationIssues(bundle: Bundle): CoverageIssue[] {
