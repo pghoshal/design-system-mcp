@@ -515,6 +515,173 @@ describe("inspect_coverage", () => {
     );
   });
 
+  it("reports missing token references, stale token replacements, and orphan patterns", async () => {
+    const bundle = {
+      version: "test",
+      schema: {
+        types: {
+          token: { searchable: ["summary"] },
+          component: { searchable: ["summary"] },
+          pattern: { searchable: ["summary"] },
+          principle: { searchable: ["summary"] },
+          voice: { searchable: ["summary"] },
+        },
+      },
+      entities: new Map([
+        [
+          "token:color.alias",
+          {
+            id: "token:color.alias",
+            type: "token",
+            summary: "Alias",
+            tags: [],
+            data: { original: "{color.missing}" },
+            source: { path: "tokens/semantic.tokens.json" },
+          },
+        ],
+        [
+          "token:color.deprecated",
+          {
+            id: "token:color.deprecated",
+            type: "token",
+            summary: "Deprecated",
+            tags: [],
+            data: { deprecated: true, replacement: "token:color.missingReplacement" },
+            source: { path: "tokens/semantic.tokens.json" },
+          },
+        ],
+        [
+          "principle:clarity",
+          {
+            id: "principle:clarity",
+            type: "principle",
+            summary: "Clarity",
+            tags: [],
+            data: {},
+            source: { path: "docs/principles/clarity.md" },
+          },
+        ],
+        [
+          "voice:default",
+          {
+            id: "voice:default",
+            type: "voice",
+            summary: "Voice",
+            tags: [],
+            data: {},
+            source: { path: "docs/voice-and-tone.md" },
+          },
+        ],
+        [
+          "component:button",
+          {
+            id: "component:button",
+            type: "component",
+            summary: "Button",
+            tags: [],
+            data: {
+              importPath: "@acme/ui/button",
+              dependencies: [{ package: "@acme/ui", type: "runtime" }],
+              props: [{ name: "label", type: "string", required: false }],
+              examples: [{ name: "Button", language: "tsx", code: "<Button />" }],
+              constraints: [{ id: "button-label", severity: "error", message: "Use labels." }],
+              principles: ["principle:clarity"],
+              patterns: ["pattern:linked"],
+              tokens: ["token:color.alias", "token:color.missingComponent"],
+            },
+            source: { path: "components/Button/component.json" },
+          },
+        ],
+        [
+          "pattern:linked",
+          {
+            id: "pattern:linked",
+            type: "pattern",
+            summary: "Linked pattern",
+            tags: [],
+            data: { contract: {} },
+            source: { path: "docs/patterns/linked.md" },
+          },
+        ],
+        [
+          "pattern:orphan",
+          {
+            id: "pattern:orphan",
+            type: "pattern",
+            summary: "Orphan pattern",
+            tags: [],
+            data: { contract: {} },
+            source: { path: "docs/patterns/orphan.md" },
+          },
+        ],
+        [
+          "pattern:related",
+          {
+            id: "pattern:related",
+            type: "pattern",
+            summary: "Related pattern",
+            tags: [],
+            data: { contract: {} },
+            source: { path: "docs/patterns/related.md" },
+          },
+        ],
+      ]),
+      relations: {
+        inFor: (id: string) =>
+          id === "pattern:related"
+            ? [{ from: "principle:clarity", to: "pattern:related", type: "references" }]
+            : [],
+      },
+    };
+    const ctx = {
+      source: { current: () => bundle },
+      cache: new LayeredCache(),
+      logger,
+      requestId: "test",
+    };
+
+    const r = await handler.handle({ include_warnings: true }, ctx as never);
+
+    expect(r.ok).toBe(false);
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({
+        id: "component-token-target-missing",
+        severity: "error",
+        entityId: "component:button",
+        message: expect.stringContaining("token:color.missingComponent"),
+      }),
+    );
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({
+        id: "token-reference-target-missing",
+        severity: "error",
+        entityId: "token:color.alias",
+        message: expect.stringContaining("token:color.missing"),
+      }),
+    );
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({
+        id: "token-replacement-target-missing",
+        severity: "error",
+        entityId: "token:color.deprecated",
+        message: expect.stringContaining("token:color.missingReplacement"),
+      }),
+    );
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({
+        id: "pattern-orphan",
+        severity: "warning",
+        entityId: "pattern:orphan",
+      }),
+    );
+    expect(r.issues).not.toContainEqual(
+      expect.objectContaining({
+        id: "pattern-orphan",
+        entityId: "pattern:related",
+      }),
+    );
+  });
+
   it("reports component examples with invalid TypeScript or JSX syntax", async () => {
     const brokenExamples = [
       { name: "Broken TS", language: "ts", code: "const answer: number =" },

@@ -358,9 +358,9 @@ There is now a CLI path for invoking `validate_ui` outside MCP:
 
 ---
 
-## 19. Bundle Quality Checks — 🟡 partial
+## 19. Bundle Quality Checks — ✅ implemented
 
-`src/tools/inspect-coverage.ts` (175 LOC) reports issues at refresh time:
+`src/tools/inspect-coverage.ts` reports deterministic bundle-quality issues at refresh time:
 
 - ✅ schema completeness (`required-type-missing-from-schema`, `declared-type-empty`)
 - ✅ missing related entity (`relation-target-missing`)
@@ -371,11 +371,13 @@ There is now a CLI path for invoking `validate_ui` outside MCP:
 - ✅ missing pattern-contract targets (`pattern-contract-target-missing`)
 - ✅ stale component replacement targets (`component-replacement-target-missing`)
 - ✅ example syntax sanity for `ts` / `tsx` / `js` / `jsx` usage examples (`component-example-syntax-invalid`)
-- 🟡 invalid token references — Style Dictionary throws on broken refs (`brokenReferences: "throw"` in `src/bundle/tokens.ts:42`); not surfaced through `inspect_coverage` separately
-- 🟡 examples compile sanity is parser-backed syntax validation, not full dependency-aware type-checking
-- 🟡 orphan patterns beyond missing contracts are not separately ranked
+- ✅ component token metadata targets (`component-token-target-missing`)
+- ✅ token alias targets in already-loaded bundle metadata (`token-reference-target-missing`)
+- ✅ stale deprecated-token replacement targets (`token-replacement-target-missing`)
+- ✅ orphan patterns beyond missing contracts (`pattern-orphan`)
+- ✅ Style Dictionary fails the bundle build on broken source token-file refs (`brokenReferences: "throw"` in `src/bundle/tokens.ts:42`)
 
-**Status:** structural, metadata-completeness, contract-target, component-replacement, and example syntax coverage is good. Deeper checks (dependency-aware example type-checking and broader graph ranking) are not.
+**Status:** deterministic server-side bundle quality checks are implemented. Broken source token aliases fail at bundle-build time through Style Dictionary; `inspect_coverage` separately checks token references that are present in already-loaded bundle metadata. Example checks are parser-backed syntax sanity, not full consumer-project type-checking, because the MCP server does not own or install every downstream app dependency.
 
 ---
 
@@ -432,8 +434,10 @@ The `inspect_coverage` tool answers part of this:
 - ✅ which deprecated tokens are still referenced (`deprecated-token-referenced`)
 - ✅ which patterns lack validation contracts (`pattern-contract-missing`)
 - ✅ orphan components (`component-orphan`)
-- ✅ missing pattern/contract/component replacement targets
+- ✅ orphan patterns (`pattern-orphan`)
+- ✅ missing token, pattern/contract, component replacement, and token replacement targets
 - ✅ invalid prop targets in pattern contracts
+- ✅ invalid syntax in `ts` / `tsx` / `js` / `jsx` component examples
 
 **Status:** `inspect_coverage` now covers core entity completeness, relation integrity, component metadata, pattern contracts, replacement integrity, and token usage/deprecation coverage.
 
@@ -503,14 +507,14 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 | 16 | Component dependency / import guidance | ✅ schema'd; surfaced via `get_usage` |
 | 17 | Deprecation and migration | ✅ component chains + migration examples + prop/token replacements |
 | 18 | CI / PR validation mode | ✅ JSON/SARIF validate_ui + composition batch CLI |
-| 19 | Bundle quality checks | 🟡 structural + metadata + orphan/contract + example syntax coverage; no dependency-aware example type-check / broader graph ranking |
+| 19 | Bundle quality checks | ✅ structural + metadata + token refs + replacements + orphan graph + example syntax |
 | 20 | Framework adapters | 🟡 language flag covers tsx/jsx/ts/js/css/html/vue (no React Native; no per-framework AST) |
 | 21 | AST-based validation rules | ✅ JSX prop value detector; className/token AST rules remain future depth |
 | 22 | Design-system coverage report | ✅ component + relation + contract + replacement + token usage coverage |
 | 23 | Strict schema specs | 🟡 strong for component / pattern / rule; weak for token / migration / platform |
 | 24 | Harness-enforced modes | 🟡 `design://workflow` published; hard blocking remains client-side |
 
-**Tally:** 20 ✅ · 4 🟡 · 0 ❌ (out of 24).
+**Tally:** 21 ✅ · 3 🟡 · 0 ❌ (out of 24).
 
 The remaining major-gap set has no fully missing server-side item. The hard parts left are depth expansions:
 
@@ -530,7 +534,7 @@ For each item that's worth promoting from 🟡 to ✅, the cheapest path is:
 If you want any of these landed, the cheapest 5 in priority order would be:
 
 1. **#5 Semantic token category enforcement** — detect color tokens in spacing/layout slots and spacing tokens in color slots.
-2. **#19 Bundle quality checks** — add dependency-aware example type-checking and broader graph ranking.
-3. **#23 Strict schema specs** — add token entity and platform-mapping schema depth.
+2. **#23 Strict schema specs** — add token entity and platform-mapping schema depth.
+3. **#20 Framework adapters** — add explicit React Native platform/schema coverage.
 
 Each is a discrete slice that fits a TDD-RED→GREEN→Critic cycle.

@@ -164,6 +164,20 @@ async function componentIssues(bundle: Bundle): Promise<CoverageIssue[]> {
         ),
       );
     }
+    if (Array.isArray(data.tokens)) {
+      for (const target of data.tokens) {
+        if (typeof target !== "string") continue;
+        const token = bundle.entities.get(target);
+        if (token?.type === "token") continue;
+        issues.push({
+          id: "component-token-target-missing",
+          severity: "error",
+          entityId: entity.id,
+          type: entity.type,
+          message: `${entity.id} token metadata references missing token ${target}.`,
+        });
+      }
+    }
     if (Array.isArray(data.replacedBy)) {
       for (const target of data.replacedBy) {
         if (typeof target !== "string") continue;
@@ -229,8 +243,18 @@ function formatDiagnosticMessage(message: unknown): string {
 
 function patternIssues(bundle: Bundle): CoverageIssue[] {
   const issues: CoverageIssue[] = [];
+  const referencedPatterns = referencedPatternIds(bundle);
   for (const entity of bundle.entities.values()) {
     if (entity.type !== "pattern") continue;
+    if (!referencedPatterns.has(entity.id)) {
+      issues.push({
+        id: "pattern-orphan",
+        severity: "warning",
+        entityId: entity.id,
+        type: entity.type,
+        message: `${entity.id} is not linked from component metadata or relations.`,
+      });
+    }
     const contract = entity.data.contract as
       | {
           requiredComponents?: string[] | undefined;
@@ -340,6 +364,30 @@ function tokenIssues(bundle: Bundle): CoverageIssue[] {
 
   for (const entity of bundle.entities.values()) {
     if (entity.type !== "token") continue;
+    for (const target of tokenReferenceIds(entity.data.original)) {
+      const referenced = bundle.entities.get(target);
+      if (referenced?.type === "token") continue;
+      issues.push({
+        id: "token-reference-target-missing",
+        severity: "error",
+        entityId: entity.id,
+        type: entity.type,
+        message: `${entity.id} aliases missing token ${target}.`,
+      });
+    }
+    if (isDeprecatedToken(entity) && typeof entity.data.replacement === "string") {
+      const target = asTokenId(entity.data.replacement);
+      const replacement = bundle.entities.get(target);
+      if (replacement?.type !== "token" || isDeprecatedToken(replacement)) {
+        issues.push({
+          id: "token-replacement-target-missing",
+          severity: "error",
+          entityId: entity.id,
+          type: entity.type,
+          message: `${entity.id} replacement target ${target} is not an active token.`,
+        });
+      }
+    }
     if (used.has(entity.id) && isDeprecatedToken(entity)) {
       issues.push({
         id: "deprecated-token-referenced",
@@ -390,10 +438,35 @@ function referencedTokenIds(bundle: Bundle): Set<string> {
   return used;
 }
 
+function referencedPatternIds(bundle: Bundle): Set<string> {
+  const used = new Set<string>();
+  for (const entity of bundle.entities.values()) {
+    if (entity.type === "pattern" && bundle.relations?.inFor(entity.id).length > 0) {
+      used.add(entity.id);
+    }
+    if (Array.isArray(entity.related)) {
+      for (const id of entity.related) {
+        if (typeof id === "string" && id.startsWith("pattern:")) used.add(id);
+      }
+    }
+    if (entity.type !== "component") continue;
+    const patterns = entity.data.patterns;
+    if (!Array.isArray(patterns)) continue;
+    for (const id of patterns) {
+      if (typeof id === "string") used.add(id);
+    }
+  }
+  return used;
+}
+
 function tokenReferenceIds(value: unknown): string[] {
   if (typeof value !== "string") return [];
   const refs = value.match(/\{[^}]+\}/g) ?? [];
-  return refs.map((ref) => `token:${ref.slice(1, -1)}`);
+  return refs.map((ref) => asTokenId(ref.slice(1, -1)));
+}
+
+function asTokenId(value: string): string {
+  return value.startsWith("token:") ? value : `token:${value}`;
 }
 
 function isDeprecatedToken(entity: Entity): boolean {
