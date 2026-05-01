@@ -1,8 +1,9 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { Logger } from "../observability/logger.js";
+import { loadComponentApiProps } from "./component-api.js";
 import { ComponentMetadataSchema } from "./schema.js";
-import type { ComponentMetadata, Entity } from "./types.js";
+import type { ComponentMetadata, ComponentProp, Entity } from "./types.js";
 
 /**
  * Loads component metadata from each component directory's `component.json`.
@@ -19,11 +20,14 @@ export async function loadComponents(repoPath: string, logger: Logger): Promise<
   const entries = await fs.readdir(dir, { withFileTypes: true });
   const files = entries
     .filter((e) => e.isDirectory())
-    .map((e) => path.join(dir, e.name, "component.json"))
-    .sort();
+    .map((e) => ({
+      componentDir: path.join(dir, e.name),
+      file: path.join(dir, e.name, "component.json"),
+    }))
+    .sort((a, b) => a.file.localeCompare(b.file));
 
   const entities: Entity[] = [];
-  for (const file of files) {
+  for (const { componentDir, file } of files) {
     if (!(await fileExists(file))) continue;
 
     let parsed: unknown;
@@ -46,7 +50,11 @@ export async function loadComponents(repoPath: string, logger: Logger): Promise<
       continue;
     }
 
-    const component = result.data as ComponentMetadata;
+    const component = await enrichComponentMetadata(
+      componentDir,
+      result.data as ComponentMetadata,
+      logger,
+    );
     entities.push({
       id: component.id,
       type: "component",
@@ -65,6 +73,30 @@ export async function loadComponents(repoPath: string, logger: Logger): Promise<
 
   logger.info({ count: entities.length }, "loaded component entities");
   return entities;
+}
+
+async function enrichComponentMetadata(
+  componentDir: string,
+  component: ComponentMetadata,
+  logger: Logger,
+): Promise<ComponentMetadata> {
+  const apiProps = await loadComponentApiProps(componentDir, component.name, logger);
+  if (apiProps.length === 0) return component;
+
+  return {
+    ...component,
+    props: mergeProps(component.props, apiProps),
+  };
+}
+
+function mergeProps(metadataProps: ComponentProp[], apiProps: ComponentProp[]): ComponentProp[] {
+  const merged = [...metadataProps];
+  const byName = new Map(metadataProps.map((prop) => [prop.name, prop]));
+  for (const apiProp of apiProps) {
+    if (byName.has(apiProp.name)) continue;
+    merged.push(apiProp);
+  }
+  return merged;
 }
 
 async function dirExists(p: string): Promise<boolean> {

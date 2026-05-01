@@ -1,0 +1,30 @@
+{
+  "id": "component:card",
+  "type": "component",
+  "name": "Card",
+  "summary": "Container for grouped related content and actions.",
+  "package": "@acme/ui",
+  "importPath": "@acme/ui/card",
+  "status": "stable",
+  "tags": ["layout", "content"],
+  "props": [
+    {
+      "name": "tone",
+      "type": "\"neutral\" | \"accent\" | \"danger\" | \"elevated\"",
+      "required": false,
+      "values": ["neutral", "accent", "danger", "elevated"]
+    }
+  ],
+  "examples": [
+    {
+      "name": "Basic card",
+      "language": "tsx",
+      "code": "import { Card } from \"@acme/ui/card\";\n\n<Card title=\"Billing\" tone=\"neutral\">Payment details</Card>"
+    }
+  ],
+  "constraints": [],
+  "tokens": ["token:color.surface.default"],
+  "principles": ["principle:clarity", "principle:consistency"],
+  "patterns": [],
+  "related": []
+}

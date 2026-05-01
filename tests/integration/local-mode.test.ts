@@ -153,6 +153,32 @@ describe("Phase 1 — local mode integration", () => {
       expect(Array.isArray(r.entity.data.props)).toBe(true);
       expect((r.related ?? []).map((e) => e.id)).toContain("token:color.action.danger");
     });
+
+    it("enriches component props from TypeScript public APIs", async () => {
+      const r = await getEntityHandler.handle(
+        { id: "component:card", resolve_relations: false },
+        ctx(),
+      );
+      const props = r.entity.data.props as Array<{
+        name: string;
+        type: string;
+        required: boolean;
+        values?: string[];
+        description?: string;
+      }>;
+      expect(props.find((prop) => prop.name === "title")).toMatchObject({
+        type: "string",
+        required: true,
+        description: "Short heading shown at the top of the card.",
+      });
+      expect(props.find((prop) => prop.name === "tone")).toMatchObject({
+        type: '"neutral" | "accent" | "danger" | "elevated"',
+        required: false,
+        values: ["neutral", "accent", "danger", "elevated"],
+      });
+      expect(props.find((prop) => prop.name === "tone")?.description).toBeUndefined();
+      expect(props.some((prop) => prop.name === "helperOnly")).toBe(false);
+    });
   });
 
   describe("list_entities", () => {
@@ -238,6 +264,19 @@ describe("Phase 1 — local mode integration", () => {
       expect(r.ok).toBe(false);
       expect(r.violations.some((v) => v.path === "props.children")).toBe(true);
       expect(r.violations.some((v) => v.path === "props.variant")).toBe(true);
+    });
+
+    it("validate_composition uses TypeScript-derived required props", async () => {
+      const r = await validateCompositionHandler.handle(
+        {
+          components: [{ id: "component:card", props: { tone: "elevated" } }],
+          tokens: [],
+        },
+        ctx(),
+      );
+      expect(r.ok).toBe(false);
+      expect(r.violations.some((v) => v.path === "props.title")).toBe(true);
+      expect(r.violations.some((v) => v.path === "props.tone")).toBe(false);
     });
 
     it("validate_composition enforces pattern contract required tokens", async () => {

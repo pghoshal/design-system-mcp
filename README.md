@@ -27,6 +27,7 @@ Implemented:
 - Prompt template loading
 - JSON regex validation rules
 - Component metadata ingestion from `components/*/component.json`
+- TypeScript component API parser for `*Props` interfaces and type literals
 - Canonical usage examples, constraints, and prop metadata
 - Composition recommendation and composition/prop validation
 - Optional HTTP API-key auth
@@ -34,10 +35,8 @@ Implemented:
 
 Not implemented yet:
 
-- TypeScript component API parser
 - Storybook story parser
 - MDX documentation parser
-- Copy/voice validators
 - MCP resources and prompt registration beyond loaded prompt data
 - Production hardening docs and rollout playbooks
 
@@ -246,6 +245,8 @@ Build a {{component_type}} using the design system.
 
 Component metadata lives in `components/<ComponentName>/component.json`. This gives agents stable imports, prop contracts, canonical examples, constraints, and relationships without requiring the MCP server to generate application code.
 
+When TypeScript source files are present beside `component.json`, the loader also reads the first matching `*Props` interface or type literal, preferring `<ComponentName>Props`. Extracted props are merged into the metadata. Hand-authored `component.json` values win when both sources define the same prop.
+
 ```json
 {
   "id": "component:button",
@@ -283,6 +284,17 @@ Component metadata lives in `components/<ComponentName>/component.json`. This gi
   "principles": ["principle:clarity"],
   "patterns": ["pattern:confirmation-dialog"],
   "related": []
+}
+```
+
+Example source-enriched props:
+
+```tsx
+export interface CardProps {
+  /** Short heading shown at the top of the card. */
+  title: string;
+  /** Visual tone for the card container. */
+  tone?: "neutral" | "accent" | "danger";
 }
 ```
 
