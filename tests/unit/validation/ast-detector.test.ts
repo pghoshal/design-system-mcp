@@ -71,4 +71,15 @@ describe("runAstDetector", () => {
     );
     expect(violations).toHaveLength(1);
   });
+
+  it("parses React Native validation language as TSX", async () => {
+    const violations = await runAstDetector(
+      disallowGhostRule,
+      '<Button variant="ghost" />',
+      "react-native",
+    );
+
+    expect(violations).toHaveLength(1);
+    expect(violations[0]?.match).toBe('variant="ghost"');
+  });
 });

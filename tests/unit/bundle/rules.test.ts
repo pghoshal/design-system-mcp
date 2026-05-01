@@ -66,6 +66,37 @@ describe("loadRules", () => {
     expect(result[0]?.detector.type).toBe("jsx-prop-value");
   });
 
+  it("loads React Native JSX prop value AST rules", async () => {
+    await writeRule("no-ghost-button-native.json", {
+      id: "no-ghost-button-native",
+      description: "no ghost buttons in native",
+      severity: "error",
+      appliesTo: ["react-native"],
+      detector: {
+        type: "jsx-prop-value",
+        component: "Button",
+        prop: "variant",
+        disallow: ["ghost"],
+        message: "Button variant '{value}' is not allowed",
+      },
+    });
+    const result = await loadRules(tmpDir, logger);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.appliesTo).toEqual(["react-native"]);
+  });
+
+  it("loads regex rules for React Native source", async () => {
+    await writeRule("no-native-hex.json", {
+      id: "no-native-hex",
+      description: "no raw native colors",
+      severity: "error",
+      appliesTo: ["react-native"],
+      detector: { type: "regex", pattern: "#[0-9a-f]+", message: "use a token" },
+    });
+    const result = await loadRules(tmpDir, logger);
+    expect(result).toHaveLength(1);
+  });
+
   it("loads multiple rules", async () => {
     await writeRule("a.json", {
       id: "rule-a",

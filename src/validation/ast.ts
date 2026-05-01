@@ -68,7 +68,7 @@ export async function runAstDetector(
   language: string,
 ): Promise<Violation[]> {
   if (rule.detector.type !== "jsx-prop-value") return [];
-  if (!["tsx", "jsx"].includes(language)) return [];
+  if (!["tsx", "jsx", "react-native"].includes(language)) return [];
 
   const ts = await loadTypeScript();
   if (!ts) return [];

@@ -364,7 +364,16 @@ export const PatternContractSchema = z
 
 export type PatternContractFile = z.infer<typeof PatternContractSchema>;
 
-export const RuleLanguageSchema = z.enum(["tsx", "jsx", "ts", "js", "css", "html", "vue"]);
+export const RuleLanguageSchema = z.enum([
+  "tsx",
+  "jsx",
+  "ts",
+  "js",
+  "css",
+  "html",
+  "vue",
+  "react-native",
+]);
 
 export const RegexDetectorSchema = z.object({
   type: z.literal("regex"),
@@ -407,8 +416,10 @@ export const RuleSchema = z
   .refine(
     (rule) =>
       rule.detector.type !== "jsx-prop-value" ||
-      rule.appliesTo.every((language) => language === "tsx" || language === "jsx"),
-    { message: "jsx-prop-value rules may only apply to tsx/jsx languages" },
+      rule.appliesTo.every(
+        (language) => language === "tsx" || language === "jsx" || language === "react-native",
+      ),
+    { message: "jsx-prop-value rules may only apply to tsx/jsx/react-native languages" },
   );
 
 export type RuleFile = z.infer<typeof RuleSchema>;

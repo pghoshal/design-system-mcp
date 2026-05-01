@@ -381,12 +381,12 @@ There is now a CLI path for invoking `validate_ui` outside MCP:
 
 ---
 
-## 20. Framework Adapters — 🟡 partial
+## 20. Framework Adapters — ✅ implemented
 
 `RuleLanguageSchema` (`src/bundle/schema.ts`):
 
 ```
-"tsx" | "jsx" | "ts" | "js" | "css" | "html" | "vue"
+"tsx" | "jsx" | "ts" | "js" | "css" | "html" | "vue" | "react-native"
 ```
 
 - ✅ React / TSX / JSX (validation rules apply)
@@ -394,10 +394,10 @@ There is now a CLI path for invoking `validate_ui` outside MCP:
 - ✅ CSS (semantic-token rules)
 - ✅ HTML (a11y, copy)
 - ✅ Vue (advertised in the enum; same regex paths apply)
-- ❌ React Native — not in the enum
-- ❌ no framework-aware AST adapter — see #21 below
+- ✅ React Native — accepted as a validation language; JSX prop AST rules parse it as TSX
+- ✅ component platform metadata schema covers canonical and custom frameworks
 
-**Status:** language flag exists; per-framework AST validation is the gap, not the language list.
+**Status:** core framework adapters are implemented for language routing and metadata. Deeper framework-specific AST detectors can still be added as rule kinds when needed.
 
 ---
 
@@ -511,13 +511,13 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 | 17 | Deprecation and migration | ✅ component chains + migration examples + prop/token replacements |
 | 18 | CI / PR validation mode | ✅ JSON/SARIF validate_ui + composition batch CLI |
 | 19 | Bundle quality checks | ✅ structural + metadata + token refs + replacements + orphan graph + example syntax |
-| 20 | Framework adapters | 🟡 language flag covers tsx/jsx/ts/js/css/html/vue (no React Native; no per-framework AST) |
+| 20 | Framework adapters | ✅ tsx/jsx/ts/js/css/html/vue/react-native + platform metadata |
 | 21 | AST-based validation rules | ✅ JSX prop value detector; className/token AST rules remain future depth |
 | 22 | Design-system coverage report | ✅ component + relation + contract + replacement + token usage coverage |
 | 23 | Strict schema specs | ✅ component + pattern + rule + token + migration + platform mapping |
 | 24 | Harness-enforced modes | 🟡 `design://workflow` published; hard blocking remains client-side |
 
-**Tally:** 22 ✅ · 2 🟡 · 0 ❌ (out of 24).
+**Tally:** 23 ✅ · 1 🟡 · 0 ❌ (out of 24).
 
 The remaining major-gap set has no fully missing server-side item. The hard parts left are depth expansions:
 
@@ -537,7 +537,6 @@ For each item that's worth promoting from 🟡 to ✅, the cheapest path is:
 If you want any of these landed, the cheapest 5 in priority order would be:
 
 1. **#5 Semantic token category enforcement** — detect color tokens in spacing/layout slots and spacing tokens in color slots.
-2. **#20 Framework adapters** — add explicit React Native platform/schema coverage.
-3. **#24 Harness-enforced modes** — publish a stricter workflow/mode contract and wire CI-side enforcement.
+2. **#24 Harness-enforced modes** — publish a stricter workflow/mode contract and wire CI-side enforcement.
 
 Each is a discrete slice that fits a TDD-RED→GREEN→Critic cycle.

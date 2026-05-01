@@ -10,7 +10,16 @@ export const SEMANTIC_TOKEN_RULE_IDS = [
 
 export type SemanticTokenRuleId = (typeof SEMANTIC_TOKEN_RULE_IDS)[number];
 
-const SUPPORTED_LANGUAGES = new Set<RuleLanguage>(["tsx", "jsx", "ts", "js", "css", "html", "vue"]);
+const SUPPORTED_LANGUAGES = new Set<RuleLanguage>([
+  "tsx",
+  "jsx",
+  "ts",
+  "js",
+  "css",
+  "html",
+  "vue",
+  "react-native",
+]);
 
 interface CssToken {
   entity: Entity;
