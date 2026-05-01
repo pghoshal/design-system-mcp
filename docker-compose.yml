@@ -1,0 +1,26 @@
+services:
+  ds-mcp:
+    build: .
+    image: ds-mcp-server:dev
+    ports:
+      - "3000:3000"
+    environment:
+      DS_MCP_MODE: http
+      DS_MCP_SOURCE_MODE: ${DS_MCP_SOURCE_MODE:-local}
+      DS_MCP_SOURCE_URL: ${DS_MCP_SOURCE_URL:-}
+      DS_MCP_SOURCE_PATH: ${DS_MCP_SOURCE_PATH:-/source}
+      DS_MCP_REFRESH_INTERVAL_SEC: "300"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DS_MCP_AUTH_MODE: ${DS_MCP_AUTH_MODE:-none}
+    volumes:
+      - ds-mcp-cache:/home/nonroot/.cache/ds-mcp
+      # Bind-mount a local design system when DS_MCP_SOURCE_MODE=local
+      # - ${LOCAL_DS_PATH:-./tests/fixtures/design-systems/sample}:/source:ro
+    healthcheck:
+      test: ["CMD", "/nodejs/bin/node", "-e", "require('http').get('http://localhost:3000/healthz', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 2s
+      retries: 5
+
+volumes:
+  ds-mcp-cache:

@@ -1,0 +1,11 @@
+{
+  "id": "no-hex-colors",
+  "description": "Raw hex colors must use design tokens (e.g. var(--color-action-primary))",
+  "severity": "error",
+  "appliesTo": ["tsx", "jsx", "ts", "js", "css"],
+  "detector": {
+    "type": "regex",
+    "pattern": "#[0-9a-fA-F]{3,8}\\b",
+    "message": "Raw hex color {match} — use a color token from tokens/ instead"
+  }
+}

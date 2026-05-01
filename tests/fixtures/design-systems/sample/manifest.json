@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0.0",
+  "schema": {
+    "types": {
+      "token": {
+        "description": "Design value primitive or alias",
+        "searchable": ["name", "summary", "tags", "$type"],
+        "facets": ["$type"]
+      },
+      "principle": {
+        "description": "Design principle",
+        "searchable": ["title", "summary", "body", "tags"]
+      },
+      "pattern": {
+        "description": "Multi-component pattern",
+        "searchable": ["title", "summary", "body", "tags"]
+      },
+      "voice": {
+        "description": "Voice & tone guideline",
+        "searchable": ["title", "summary", "body", "tags"]
+      }
+    },
+    "relations": {
+      "uses_token": { "from": "component", "to": "token" },
+      "follows_principle": { "from": "component", "to": "principle" },
+      "composes": { "from": "pattern", "to": "component" }
+    }
+  }
+}

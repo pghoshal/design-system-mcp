@@ -1,0 +1,21 @@
+{
+  "color": {
+    "action": {
+      "primary": {
+        "$value": "{color.blue.500}",
+        "$type": "color",
+        "$description": "Primary action color"
+      },
+      "primaryHover": { "$value": "{color.blue.600}", "$type": "color" },
+      "danger": {
+        "$value": "{color.red.500}",
+        "$type": "color",
+        "$description": "Destructive action color"
+      }
+    },
+    "surface": {
+      "default": { "$value": "{color.neutral.0}", "$type": "color" },
+      "inverse": { "$value": "{color.neutral.900}", "$type": "color" }
+    }
+  }
+}

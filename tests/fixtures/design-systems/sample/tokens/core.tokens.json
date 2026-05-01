@@ -1,0 +1,33 @@
+{
+  "color": {
+    "blue": {
+      "500": { "$value": "#2563EB", "$type": "color", "$description": "Brand blue 500" },
+      "600": { "$value": "#1D4ED8", "$type": "color" }
+    },
+    "red": {
+      "500": { "$value": "#DC2626", "$type": "color", "$description": "Danger red 500" }
+    },
+    "neutral": {
+      "0": { "$value": "#FFFFFF", "$type": "color" },
+      "900": { "$value": "#0F172A", "$type": "color" }
+    }
+  },
+  "spacing": {
+    "xs": { "$value": "4px", "$type": "dimension" },
+    "sm": { "$value": "8px", "$type": "dimension" },
+    "md": { "$value": "16px", "$type": "dimension" },
+    "lg": { "$value": "24px", "$type": "dimension" },
+    "xl": { "$value": "32px", "$type": "dimension" }
+  },
+  "font": {
+    "family": {
+      "sans": { "$value": "Inter, system-ui, sans-serif", "$type": "fontFamily" },
+      "mono": { "$value": "ui-monospace, SFMono-Regular, monospace", "$type": "fontFamily" }
+    },
+    "size": {
+      "body": { "$value": "14px", "$type": "dimension" },
+      "h1": { "$value": "32px", "$type": "dimension" },
+      "h2": { "$value": "24px", "$type": "dimension" }
+    }
+  }
+}

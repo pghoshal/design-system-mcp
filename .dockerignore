@@ -1,0 +1,16 @@
+node_modules
+dist
+coverage
+.cache
+.env
+.env.*
+.git
+.github
+.vscode
+.idea
+.DS_Store
+*.log
+.tsbuildinfo
+tests
+docs
+.claude
