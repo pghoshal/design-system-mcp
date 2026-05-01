@@ -151,6 +151,20 @@ function componentIssues(bundle: Bundle): CoverageIssue[] {
         ),
       );
     }
+    if (Array.isArray(data.replacedBy)) {
+      for (const target of data.replacedBy) {
+        if (typeof target !== "string") continue;
+        const replacement = bundle.entities.get(target);
+        if (replacement?.type === "component" && replacement.data.status !== "deprecated") continue;
+        issues.push({
+          id: "component-replacement-target-missing",
+          severity: "error",
+          entityId: entity.id,
+          type: entity.type,
+          message: `${entity.id} replacement target ${target} is not an active component.`,
+        });
+      }
+    }
   }
   return issues;
 }

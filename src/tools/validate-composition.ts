@@ -115,6 +115,7 @@ function validateComponent(
 ): void {
   const data = entity.data as {
     status?: string | undefined;
+    replacedBy?: string[] | undefined;
     props?: ComponentProp[] | undefined;
     patterns?: string[] | undefined;
   };
@@ -122,8 +123,11 @@ function validateComponent(
   if (data.status === "deprecated") {
     violations.push({
       entityId: entity.id,
-      severity: "warning",
+      severity: "error",
       message: `${entity.id} is deprecated.`,
+      ...(data.replacedBy && data.replacedBy.length > 0
+        ? { suggestion: `Use ${data.replacedBy.join(" or ")} instead.` }
+        : {}),
     });
   }
 

@@ -64,6 +64,7 @@ export async function loadComponents(repoPath: string, logger: Logger): Promise<
       data: component as unknown as Record<string, unknown>,
       related: [
         ...component.related,
+        ...component.replacedBy,
         ...component.tokens,
         ...component.principles,
         ...component.patterns,

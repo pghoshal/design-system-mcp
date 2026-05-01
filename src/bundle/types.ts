@@ -89,6 +89,11 @@ export interface UsageExample {
   interactions?: string[] | undefined;
 }
 
+export interface MigrationGuidance {
+  steps: string[];
+  examples: UsageExample[];
+}
+
 export interface ComponentDependency {
   package: string;
   version?: string | undefined;
@@ -133,6 +138,8 @@ export interface ComponentMetadata {
   dependencies: ComponentDependency[];
   importGuidance?: ImportGuidance | undefined;
   status: "stable" | "experimental" | "deprecated";
+  replacedBy: string[];
+  migration?: MigrationGuidance | undefined;
   tags: string[];
   props: ComponentProp[];
   examples: UsageExample[];

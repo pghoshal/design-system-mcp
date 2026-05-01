@@ -331,6 +331,7 @@ When Storybook CSF files such as `Card.stories.tsx` are present, object stories 
     "notes": ["Import Button from @acme/ui/button; do not deep-import internal files."]
   },
   "status": "stable",
+  "replacedBy": [],
   "tags": ["action", "form"],
   "props": [
     {
@@ -361,6 +362,31 @@ When Storybook CSF files such as `Card.stories.tsx` are present, object stories 
   "related": []
 }
 ```
+
+Deprecated components can declare migration chains:
+
+```json
+{
+  "id": "component:legacy-button",
+  "status": "deprecated",
+  "replacedBy": ["component:button"],
+  "migration": {
+    "steps": [
+      "Replace LegacyButton imports with Button imports.",
+      "Map intent=\"danger\" to variant=\"danger\"."
+    ],
+    "examples": [
+      {
+        "name": "LegacyButton to Button",
+        "language": "tsx",
+        "code": "<Button variant=\"danger\">Delete project</Button>"
+      }
+    ]
+  }
+}
+```
+
+`validate_composition` treats deprecated components as error-severity legacy usage and suggests replacement component ids when declared. `inspect_coverage` reports stale `replacedBy` targets.
 
 Example source-enriched props:
 

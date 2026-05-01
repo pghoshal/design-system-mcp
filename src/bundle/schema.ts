@@ -122,6 +122,13 @@ export const UsageExampleSchema = z.object({
   interactions: z.array(z.string().min(1).max(5_000)).optional(),
 });
 
+export const MigrationSchema = z
+  .object({
+    steps: z.array(z.string().min(1).max(2_000)).default([]),
+    examples: z.array(UsageExampleSchema).default([]),
+  })
+  .strict();
+
 export const ComponentDependencySchema = z
   .object({
     package: z.string().min(1).max(128),
@@ -180,6 +187,16 @@ export const ComponentMetadataSchema = z.object({
   dependencies: z.array(ComponentDependencySchema).default([]),
   importGuidance: ImportGuidanceSchema.optional(),
   status: z.enum(["stable", "experimental", "deprecated"]).default("stable"),
+  replacedBy: z
+    .array(
+      z
+        .string()
+        .min(1)
+        .max(256)
+        .regex(/^component:/, "replacement id must start with component:"),
+    )
+    .default([]),
+  migration: MigrationSchema.optional(),
   tags: z.array(z.string().min(1).max(64)).default([]),
   props: z.array(ComponentPropSchema).default([]),
   examples: z.array(UsageExampleSchema).default([]),

@@ -155,4 +155,126 @@ describe("inspect_coverage", () => {
       }),
     );
   });
+
+  it("reports stale component replacement targets", async () => {
+    const bundle = {
+      version: "test",
+      schema: {
+        types: {
+          token: { searchable: ["summary"] },
+          component: { searchable: ["summary"] },
+          pattern: { searchable: ["summary"] },
+          principle: { searchable: ["summary"] },
+          voice: { searchable: ["summary"] },
+        },
+      },
+      entities: new Map([
+        [
+          "token:color.action.danger",
+          {
+            id: "token:color.action.danger",
+            type: "token",
+            summary: "Danger",
+            tags: [],
+            data: {},
+            source: { path: "tokens/semantic.tokens.json" },
+          },
+        ],
+        [
+          "principle:clarity",
+          {
+            id: "principle:clarity",
+            type: "principle",
+            summary: "Clarity",
+            tags: [],
+            data: {},
+            source: { path: "docs/principles/clarity.md" },
+          },
+        ],
+        [
+          "voice:default",
+          {
+            id: "voice:default",
+            type: "voice",
+            summary: "Voice",
+            tags: [],
+            data: {},
+            source: { path: "docs/voice-and-tone.md" },
+          },
+        ],
+        [
+          "component:legacy",
+          {
+            id: "component:legacy",
+            type: "component",
+            summary: "Legacy",
+            tags: [],
+            data: {
+              status: "deprecated",
+              replacedBy: ["component:missing", "token:color.action.danger", "component:old"],
+              importPath: "@acme/legacy",
+              dependencies: [{ package: "@acme/legacy", type: "runtime" }],
+              props: [{ name: "label", type: "string", required: false }],
+              examples: [{ name: "Legacy", language: "tsx", code: "<Legacy />" }],
+              principles: ["principle:clarity"],
+              patterns: [],
+            },
+            source: { path: "components/Legacy/component.json" },
+          },
+        ],
+        [
+          "component:old",
+          {
+            id: "component:old",
+            type: "component",
+            summary: "Old replacement",
+            tags: [],
+            data: {
+              status: "deprecated",
+              importPath: "@acme/old",
+              dependencies: [{ package: "@acme/old", type: "runtime" }],
+              props: [{ name: "label", type: "string", required: false }],
+              examples: [{ name: "Old", language: "tsx", code: "<Old />" }],
+              principles: ["principle:clarity"],
+              patterns: ["pattern:confirmation-dialog"],
+            },
+            source: { path: "components/Old/component.json" },
+          },
+        ],
+      ]),
+    };
+    const ctx = {
+      source: { current: () => bundle },
+      cache: new LayeredCache(),
+      logger,
+      requestId: "test",
+    };
+
+    const r = await handler.handle({ include_warnings: true }, ctx as never);
+
+    expect(r.ok).toBe(false);
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({
+        id: "component-replacement-target-missing",
+        entityId: "component:legacy",
+        message:
+          "component:legacy replacement target component:missing is not an active component.",
+      }),
+    );
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({
+        id: "component-replacement-target-missing",
+        entityId: "component:legacy",
+        message:
+          "component:legacy replacement target token:color.action.danger is not an active component.",
+      }),
+    );
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({
+        id: "component-replacement-target-missing",
+        entityId: "component:legacy",
+        message: "component:legacy replacement target component:old is not an active component.",
+      }),
+    );
+  });
 });

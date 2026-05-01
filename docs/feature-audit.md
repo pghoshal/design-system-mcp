@@ -327,20 +327,20 @@ ImportGuidanceSchema:       named, default?, namespace?, sideEffects, notes
 
 ---
 
-## 17. Deprecation and Migration — 🟡 partial, improved
+## 17. Deprecation and Migration — ✅ implemented
 
 The schema supports `status: "stable" | "experimental" | "deprecated"` on component metadata (`src/bundle/schema.ts`). Beyond that:
 
-- ✅ deprecated components flagged
+- ✅ deprecated components blocked in `validate_composition` with error severity
+- ✅ component-level `replacedBy` replacement chains
+- ✅ component-level `migration.steps` and `migration.examples`
+- ✅ stale component replacement targets reported by `inspect_coverage`
 - ✅ deprecated **props** — `ComponentPropSchema` carries `deprecated` / `replacedBy`
 - ✅ `validate_composition` warns on deprecated prop usage and suggests replacements
 - ✅ deprecated **tokens** — token entities preserve `$deprecated` / `$replacement`
 - ✅ `validate_ui` blocks deprecated token CSS vars and suggests replacements
-- 🟡 replacement IDs exist for props/tokens, not component-level chains
-- ❌ migration examples (no schema for them)
-- ❌ hard errors for forbidden legacy usage (no rule enforces "do not import deprecated components")
 
-**Status:** component, prop, and token deprecation are modeled enough for validation. Component-level replacement chains and migration examples remain open.
+**Status:** component, prop, and token deprecation all have deterministic replacement/migration surfaces. Deprecated component usage is blocked before code generation through `validate_composition`.
 
 ---
 
@@ -369,12 +369,12 @@ There is now a CLI path for invoking `validate_ui` outside MCP:
 - ✅ orphan components (`component-orphan`)
 - ✅ missing pattern contracts (`pattern-contract-missing`)
 - ✅ missing pattern-contract targets (`pattern-contract-target-missing`)
+- ✅ stale component replacement targets (`component-replacement-target-missing`)
 - 🟡 invalid token references — Style Dictionary throws on broken refs (`brokenReferences: "throw"` in `src/bundle/tokens.ts:42`); not surfaced through `inspect_coverage` separately
 - ❌ examples-compile sanity (no parser / type-checker on example code blocks)
 - 🟡 orphan patterns beyond missing contracts are not separately ranked
-- ❌ stale deprecated-replacement targets (deprecation isn't deeply modeled — see #17)
 
-**Status:** structural and metadata-completeness coverage is good. Deeper checks (compile, orphans, stale replacements) are not.
+**Status:** structural, metadata-completeness, contract-target, and component-replacement coverage is good. Deeper checks (example compile and broader graph ranking) are not.
 
 ---
 
@@ -454,10 +454,10 @@ What is NOT yet schema'd:
 - ❌ token entity (loaded freely from DTCG; no first-party Zod for the resulting Entity.data shape)
 - ❌ accessibility-contract (no separate schema; rules embed in the rule schema)
 - ❌ copy-rule (same — no separate schema)
-- ❌ migration (no field beyond a single `status` enum)
+- ✅ migration guidance (`MigrationSchema` with steps and examples)
 - ❌ platform mapping (no schema for "this component on iOS uses X")
 
-**Status:** strong on component / pattern / usage / constraint / rule. Weak on token / migration / platform-mapping schemas.
+**Status:** strong on component / pattern / usage / constraint / rule / migration. Weak on token and platform-mapping schemas.
 
 ---
 
@@ -499,7 +499,7 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 | 14 | Copy / voice validator | ✅ 4 rules (no glossary / reading-level / per-surface tone) |
 | 15 | Design decision trace | ✅ validation + recommendation provenance |
 | 16 | Component dependency / import guidance | ✅ schema'd; surfaced via `get_usage` |
-| 17 | Deprecation and migration | 🟡 component + prop + token deprecation; no component replacement chains |
+| 17 | Deprecation and migration | ✅ component chains + migration examples + prop/token replacements |
 | 18 | CI / PR validation mode | ✅ JSON/SARIF validate_ui + composition batch CLI |
 | 19 | Bundle quality checks | 🟡 structural + metadata + orphan/contract coverage; no example compile / stale replacement |
 | 20 | Framework adapters | 🟡 language flag covers tsx/jsx/ts/js/css/html/vue (no React Native; no per-framework AST) |
@@ -508,7 +508,7 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 | 23 | Strict schema specs | 🟡 strong for component / pattern / rule; weak for token / migration / platform |
 | 24 | Harness-enforced modes | 🟡 `design://workflow` published; hard blocking remains client-side |
 
-**Tally:** 18 ✅ · 6 🟡 · 0 ❌ (out of 24).
+**Tally:** 19 ✅ · 5 🟡 · 0 ❌ (out of 24).
 
 The remaining major-gap set has no fully missing server-side item. The hard parts left are depth expansions:
 
@@ -524,13 +524,12 @@ For each item that's worth promoting from 🟡 to ✅, the cheapest path is:
 | #4 Accessibility → dialog / contrast | Add dialog focus/escape and token-based contrast rules to `accessibility.ts` |
 | #5 Tokens → category enforcement | Add a rule keyed off the token's `$type` field |
 | #7 Pattern contract → +copy + interaction | Extend `PatternContractSchema` with `copyRules: string[]`, `interactionRules: string[]` |
-| #17 Deprecation → component replacement | Add replacement fields to component schemas and migration examples |
 | #22 Coverage → token-usage | Add unused-token and deprecated-token target checks in `inspect-coverage.ts` |
 
 If you want any of these landed, the cheapest 5 in priority order would be:
 
 1. **#5 Semantic token category enforcement** — detect color tokens in spacing/layout slots and spacing tokens in color slots.
-2. **#17 Deprecation and migration** — add component-level replacement chains and migration examples.
-3. **#19 Bundle quality checks** — add stale replacement and example compile sanity checks.
+2. **#19 Bundle quality checks** — add example compile sanity checks.
+3. **#22 Coverage report** — add unused-token and deprecated-token target checks.
 
 Each is a discrete slice that fits a TDD-RED→GREEN→Critic cycle.

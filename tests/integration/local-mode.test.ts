@@ -640,6 +640,54 @@ describe("Phase 1 — local mode integration", () => {
       );
     });
 
+    it("validate_composition blocks deprecated components with replacement guidance", async () => {
+      const r = await validateCompositionHandler.handle(
+        {
+          components: [
+            {
+              id: "component:legacy-button",
+              props: { intent: "danger", label: "Delete project" },
+            },
+          ],
+          tokens: [],
+        },
+        ctx(),
+      );
+      expect(r.ok).toBe(false);
+      expect(r.violations).toContainEqual(
+        expect.objectContaining({
+          entityId: "component:legacy-button",
+          severity: "error",
+          suggestion: "Use component:button instead.",
+        }),
+      );
+    });
+
+    it("returns component migration chains and examples", async () => {
+      const r = await getEntityHandler.handle(
+        { id: "component:legacy-button", resolve_relations: true },
+        ctx(),
+      );
+      expect(r.entity.data).toMatchObject({
+        status: "deprecated",
+        replacedBy: ["component:button"],
+        migration: {
+          steps: [
+            "Replace LegacyButton imports from @acme/legacy-ui/button with Button from @acme/ui/button.",
+            'Map intent="danger" to variant="danger".',
+            "Move label text into children.",
+          ],
+          examples: [
+            expect.objectContaining({
+              name: "LegacyButton to Button",
+              code: expect.stringContaining('<Button variant="danger">Delete project</Button>'),
+            }),
+          ],
+        },
+      });
+      expect((r.related ?? []).map((entity) => entity.id)).toContain("component:button");
+    });
+
     it("validate_composition enforces pattern contract required tokens", async () => {
       const r = await validateCompositionHandler.handle(
         {

@@ -1,0 +1,59 @@
+{
+  "id": "component:legacy-button",
+  "type": "component",
+  "name": "LegacyButton",
+  "summary": "Deprecated action trigger kept only for migration coverage.",
+  "package": "@acme/legacy-ui",
+  "importPath": "@acme/legacy-ui/button",
+  "dependencies": [
+    {
+      "package": "@acme/legacy-ui",
+      "version": "<2",
+      "type": "runtime",
+      "reason": "Legacy package retained for migration examples."
+    }
+  ],
+  "status": "deprecated",
+  "replacedBy": ["component:button"],
+  "migration": {
+    "steps": [
+      "Replace LegacyButton imports from @acme/legacy-ui/button with Button from @acme/ui/button.",
+      "Map intent=\"danger\" to variant=\"danger\".",
+      "Move label text into children."
+    ],
+    "examples": [
+      {
+        "name": "LegacyButton to Button",
+        "language": "tsx",
+        "description": "Migrate the legacy destructive action to the stable Button component.",
+        "code": "import { Button } from \"@acme/ui/button\";\n\n<Button variant=\"danger\">Delete project</Button>"
+      }
+    ]
+  },
+  "tags": ["action", "legacy"],
+  "props": [
+    {
+      "name": "intent",
+      "type": "\"primary\" | \"danger\"",
+      "required": true,
+      "values": ["primary", "danger"]
+    },
+    {
+      "name": "label",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "examples": [
+    {
+      "name": "Legacy destructive action",
+      "language": "tsx",
+      "code": "import { LegacyButton } from \"@acme/legacy-ui/button\";\n\n<LegacyButton intent=\"danger\" label=\"Delete project\" />"
+    }
+  ],
+  "constraints": [],
+  "tokens": ["token:color.action.danger"],
+  "principles": ["principle:clarity"],
+  "patterns": [],
+  "related": ["component:button"]
+}
