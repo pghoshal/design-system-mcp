@@ -130,6 +130,9 @@ describe("Phase 2 — HTTP transport", () => {
       expect(names).toContain("resolve_token");
       expect(names).toContain("get_related");
       expect(names).toContain("validate_ui");
+      expect(names).toContain("get_usage");
+      expect(names).toContain("recommend_composition");
+      expect(names).toContain("validate_composition");
 
       const result = await client.callTool({
         name: "describe_schema",
@@ -156,6 +159,17 @@ describe("Phase 2 — HTTP transport", () => {
       };
       expect(vsc.ok).toBe(false);
       expect(vsc.violations.some((v) => v.ruleId === "no-hex-colors")).toBe(true);
+
+      const usage = await client.callTool({
+        name: "get_usage",
+        arguments: { id: "component:button", language: "tsx" },
+      });
+      const usc = usage.structuredContent as {
+        importPath?: string;
+        examples: Array<{ code: string }>;
+      };
+      expect(usc.importPath).toBe("@acme/ui/button");
+      expect(usc.examples.some((e) => e.code.includes("<Button"))).toBe(true);
 
       await client.close();
     }, 15_000);

@@ -26,12 +26,18 @@ Implemented:
 - Markdown content loading
 - Prompt template loading
 - JSON regex validation rules
+- Component metadata ingestion from `components/*/component.json`
+- Canonical usage examples, constraints, and prop metadata
+- Composition recommendation and composition/prop validation
 - Optional HTTP API-key auth
 - Health, readiness, version, and admin refresh endpoints
 
 Not implemented yet:
 
-- Component/story parser
+- TypeScript component API parser
+- Storybook story parser
+- MDX documentation parser
+- Advanced accessibility/copy/token semantic validators
 - MCP resources and prompt registration beyond loaded prompt data
 - Production hardening docs and rollout playbooks
 
@@ -59,6 +65,9 @@ Design-system Git repo
   docs/patterns/*.md
   docs/conventions/*.md
   docs/voice-and-tone.md
+  components/
+    Button/
+      component.json
   prompts/*.prompt.md
   rules/*.json
   manifest.json
@@ -211,6 +220,50 @@ arguments:
 ---
 
 Build a {{component_type}} using the design system.
+```
+
+### Component Metadata
+
+Component metadata lives in `components/<ComponentName>/component.json`. This gives agents stable imports, prop contracts, canonical examples, constraints, and relationships without requiring the MCP server to generate application code.
+
+```json
+{
+  "id": "component:button",
+  "type": "component",
+  "name": "Button",
+  "summary": "Action trigger for primary, secondary, and destructive user actions.",
+  "package": "@acme/ui",
+  "importPath": "@acme/ui/button",
+  "status": "stable",
+  "tags": ["action", "form"],
+  "props": [
+    {
+      "name": "variant",
+      "type": "\"primary\" | \"secondary\" | \"danger\"",
+      "required": true,
+      "values": ["primary", "secondary", "danger"],
+      "description": "Visual intent. Use danger only for destructive actions."
+    }
+  ],
+  "examples": [
+    {
+      "name": "Destructive confirm action",
+      "language": "tsx",
+      "code": "import { Button } from \"@acme/ui/button\";\n\n<Button variant=\"danger\">Delete project</Button>"
+    }
+  ],
+  "constraints": [
+    {
+      "id": "button-specific-label",
+      "severity": "error",
+      "message": "Button labels must name the action and object."
+    }
+  ],
+  "tokens": ["token:color.action.primary"],
+  "principles": ["principle:clarity"],
+  "patterns": ["pattern:confirmation-dialog"],
+  "related": []
+}
 ```
 
 ### Validation Rules
@@ -376,6 +429,9 @@ The server exposes generic verbs:
 | `get_related` | Fetch related entities |
 | `resolve_token` | Find tokens and return platform-formatted values |
 | `validate_ui` | Validate generated code against source-repo rules |
+| `get_usage` | Return canonical imports, examples, props, and constraints |
+| `recommend_composition` | Return an implementation brief for a UI intent |
+| `validate_composition` | Validate planned components, props, patterns, and tokens before coding |
 
 Example `validate_ui` request:
 
@@ -386,6 +442,17 @@ Example `validate_ui` request:
   "rules": []
 }
 ```
+
+Recommended harness flow for stronger design consistency:
+
+1. Call `describe_schema`.
+2. Call `recommend_composition` with the UI intent.
+3. Call `get_usage` for selected components.
+4. Call `resolve_token` for concrete values.
+5. Call `validate_composition` on the planned component/prop structure.
+6. Generate code.
+7. Call `validate_ui` on the generated code.
+8. Repair all error violations before presenting the result.
 
 Example response:
 

@@ -34,7 +34,7 @@ export function buildSearchIndex(
       tags: ent.tags.join(" "),
       name: pickString(data, "name"),
       title: pickString(data, "title"),
-      body: pickString(data, "body"),
+      body: pickString(data, "body") ?? componentSearchBody(data),
       $type: pickString(data, "$type"),
     });
   }
@@ -45,4 +45,26 @@ export function buildSearchIndex(
 function pickString(data: Record<string, unknown>, key: string): string | undefined {
   const v = data[key];
   return typeof v === "string" ? v : undefined;
+}
+
+function componentSearchBody(data: Record<string, unknown>): string | undefined {
+  const chunks: string[] = [];
+  const props = data.props;
+  if (Array.isArray(props)) {
+    for (const p of props) {
+      if (typeof p !== "object" || p === null) continue;
+      const rec = p as Record<string, unknown>;
+      chunks.push(String(rec.name ?? ""), String(rec.description ?? ""), String(rec.type ?? ""));
+      const values = rec.values;
+      if (Array.isArray(values)) chunks.push(values.join(" "));
+    }
+  }
+  const constraints = data.constraints;
+  if (Array.isArray(constraints)) {
+    for (const c of constraints) {
+      if (typeof c !== "object" || c === null) continue;
+      chunks.push(String((c as Record<string, unknown>).message ?? ""));
+    }
+  }
+  return chunks.filter(Boolean).join(" ") || undefined;
 }

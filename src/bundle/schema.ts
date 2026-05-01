@@ -59,7 +59,7 @@ export const DEFAULT_SCHEMA = SchemaDefinitionSchema.parse({
     },
     component: {
       description: "UI component",
-      searchable: ["name", "summary", "tags"],
+      searchable: ["name", "summary", "body", "tags"],
       idPattern: "^component:",
     },
   },
@@ -71,6 +71,11 @@ export const DEFAULT_SCHEMA = SchemaDefinitionSchema.parse({
       description: "Component should follow the principle",
     },
     composes: { from: "pattern", to: "component", description: "Pattern composes the component" },
+    implements_pattern: {
+      from: "component",
+      to: "pattern",
+      description: "Component is suitable for the pattern",
+    },
   },
 });
 
@@ -101,6 +106,57 @@ export const PromptFrontmatterSchema = z.object({
     .default([]),
 });
 export type PromptFrontmatter = z.infer<typeof PromptFrontmatterSchema>;
+
+export const UsageExampleSchema = z.object({
+  name: z.string().min(1),
+  language: z.string().min(1).max(32),
+  code: z.string().min(1).max(50_000),
+  description: z.string().optional(),
+});
+
+export const ComponentPropSchema = z.object({
+  name: z.string().min(1).max(64),
+  type: z.string().min(1).max(256),
+  required: z.boolean().default(false),
+  description: z.string().optional(),
+  values: z.array(z.string().min(1).max(128)).optional(),
+  default: z.union([z.string(), z.number(), z.boolean()]).optional(),
+});
+
+export const DesignConstraintSchema = z.object({
+  id: z
+    .string()
+    .min(1)
+    .max(96)
+    .regex(/^[a-z][a-z0-9-]*$/i, "id must match [a-zA-Z][a-zA-Z0-9-]*"),
+  severity: z.enum(["error", "warning", "info"]).default("warning"),
+  message: z.string().min(1).max(2_000),
+  rationale: z.string().max(4_000).optional(),
+});
+
+export const ComponentMetadataSchema = z.object({
+  id: z
+    .string()
+    .min(1)
+    .max(256)
+    .regex(/^component:/, "component id must start with component:"),
+  type: z.literal("component").default("component"),
+  name: z.string().min(1).max(128),
+  summary: z.string().min(1).max(1_000),
+  package: z.string().min(1).max(128).optional(),
+  importPath: z.string().min(1).max(256),
+  status: z.enum(["stable", "experimental", "deprecated"]).default("stable"),
+  tags: z.array(z.string().min(1).max(64)).default([]),
+  props: z.array(ComponentPropSchema).default([]),
+  examples: z.array(UsageExampleSchema).default([]),
+  constraints: z.array(DesignConstraintSchema).default([]),
+  tokens: z.array(z.string().min(1).max(256)).default([]),
+  principles: z.array(z.string().min(1).max(256)).default([]),
+  patterns: z.array(z.string().min(1).max(256)).default([]),
+  related: z.array(z.string().min(1).max(256)).default([]),
+});
+
+export type ComponentMetadataFile = z.infer<typeof ComponentMetadataSchema>;
 
 export const RuleLanguageSchema = z.enum(["tsx", "jsx", "ts", "js", "css", "html", "vue"]);
 

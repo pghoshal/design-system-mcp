@@ -3,6 +3,7 @@ import path from "node:path";
 import { simpleGit } from "simple-git";
 import type { Logger } from "../observability/logger.js";
 import { buildSearchIndex } from "../search/minisearch.js";
+import { loadComponents } from "./components.js";
 import { loadManifest } from "./manifest.js";
 import { loadMarkdown, loadPrompts } from "./markdown.js";
 import { loadRules } from "./rules.js";
@@ -25,14 +26,20 @@ export async function buildBundle(opts: BuildBundleOptions): Promise<Bundle> {
 
   const manifest = await loadManifest(sourcePath, logger);
 
-  const [tokenResult, mdEntities, promptResult, rules] = await Promise.all([
+  const [tokenResult, mdEntities, componentEntities, promptResult, rules] = await Promise.all([
     loadTokens(sourcePath, logger),
     loadMarkdown(sourcePath, logger),
+    loadComponents(sourcePath, logger),
     loadPrompts(sourcePath, logger),
     loadRules(sourcePath, logger),
   ]);
 
-  const allEntities: Entity[] = [...tokenResult.entities, ...mdEntities, ...promptResult.entities];
+  const allEntities: Entity[] = [
+    ...tokenResult.entities,
+    ...mdEntities,
+    ...componentEntities,
+    ...promptResult.entities,
+  ];
 
   const entityMap = new Map<string, Entity>();
   const duplicates: string[] = [];
@@ -55,7 +62,7 @@ export async function buildBundle(opts: BuildBundleOptions): Promise<Bundle> {
         logger.warn({ from: ent.id, to: target }, "relation target not found");
         continue;
       }
-      relations.add({ from: ent.id, to: target, type: "related" });
+      relations.add({ from: ent.id, to: target, type: relationTypeFor(ent, target) });
     }
   }
 
@@ -86,6 +93,7 @@ export async function buildBundle(opts: BuildBundleOptions): Promise<Bundle> {
       entityCount: entityMap.size,
       tokens: tokenResult.entities.length,
       markdown: mdEntities.length,
+      components: componentEntities.length,
       prompts: promptResult.prompts.length,
       rules: rules.length,
       manifestSource: manifest.source,
@@ -95,6 +103,19 @@ export async function buildBundle(opts: BuildBundleOptions): Promise<Bundle> {
   );
 
   return bundle;
+}
+
+function relationTypeFor(ent: Entity, target: string): string {
+  if (ent.type !== "component") return "related";
+  const data = ent.data as {
+    tokens?: string[] | undefined;
+    principles?: string[] | undefined;
+    patterns?: string[] | undefined;
+  };
+  if (data.tokens?.includes(target)) return "uses_token";
+  if (data.principles?.includes(target)) return "follows_principle";
+  if (data.patterns?.includes(target)) return "implements_pattern";
+  return "related";
 }
 
 async function tryGetGitSha(repoPath: string, logger: Logger): Promise<string | null> {

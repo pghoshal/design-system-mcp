@@ -4,9 +4,12 @@ import type { ZodTypeAny } from "zod";
 import { handler as describeSchemaHandler } from "../tools/describe-schema.js";
 import { handler as getEntityHandler } from "../tools/get-entity.js";
 import { handler as getRelatedHandler } from "../tools/get-related.js";
+import { handler as getUsageHandler } from "../tools/get-usage.js";
 import { handler as listEntitiesHandler } from "../tools/list-entities.js";
+import { handler as recommendCompositionHandler } from "../tools/recommend-composition.js";
 import { handler as resolveTokenHandler } from "../tools/resolve-token.js";
 import { handler as searchHandler } from "../tools/search-design-system.js";
+import { handler as validateCompositionHandler } from "../tools/validate-composition.js";
 import { handler as validateUiHandler } from "../tools/validate-ui.js";
 import { ToolError } from "../util/errors.js";
 import { newRequestId } from "../util/ids.js";
@@ -26,6 +29,9 @@ const TOOLS: ReadonlyArray<ToolHandler<any, any>> = [
   getRelatedHandler,
   resolveTokenHandler,
   validateUiHandler,
+  getUsageHandler,
+  recommendCompositionHandler,
+  validateCompositionHandler,
 ];
 
 export function buildMcpServer(opts: BuildServerOptions): McpServer {

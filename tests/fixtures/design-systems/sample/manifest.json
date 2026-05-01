@@ -18,12 +18,17 @@
       "voice": {
         "description": "Voice & tone guideline",
         "searchable": ["title", "summary", "body", "tags"]
+      },
+      "component": {
+        "description": "UI component metadata",
+        "searchable": ["name", "summary", "body", "tags"]
       }
     },
     "relations": {
       "uses_token": { "from": "component", "to": "token" },
       "follows_principle": { "from": "component", "to": "principle" },
-      "composes": { "from": "pattern", "to": "component" }
+      "composes": { "from": "pattern", "to": "component" },
+      "implements_pattern": { "from": "component", "to": "pattern" }
     }
   }
 }

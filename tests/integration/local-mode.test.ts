@@ -6,9 +6,12 @@ import { LocalSourceAdapter } from "../../src/source/local.js";
 import { SourceManager } from "../../src/source/manager.js";
 import { handler as describeHandler } from "../../src/tools/describe-schema.js";
 import { handler as getEntityHandler } from "../../src/tools/get-entity.js";
+import { handler as getUsageHandler } from "../../src/tools/get-usage.js";
 import { handler as listHandler } from "../../src/tools/list-entities.js";
+import { handler as recommendCompositionHandler } from "../../src/tools/recommend-composition.js";
 import { handler as resolveHandler } from "../../src/tools/resolve-token.js";
 import { handler as searchHandler } from "../../src/tools/search-design-system.js";
+import { handler as validateCompositionHandler } from "../../src/tools/validate-composition.js";
 import { handler as validateUiHandler } from "../../src/tools/validate-ui.js";
 import { ToolError } from "../../src/util/errors.js";
 import { LayeredCache } from "../../src/util/lru.js";
@@ -50,7 +53,7 @@ describe("Phase 1 — local mode integration", () => {
     it("returns schema with declared types", async () => {
       const r = await describeHandler.handle({}, ctx());
       expect(Object.keys(r.types).sort()).toEqual(
-        ["pattern", "principle", "token", "voice"].sort(),
+        ["component", "pattern", "principle", "token", "voice"].sort(),
       );
       expect(r.totalEntities).toBeGreaterThan(20);
       expect(r.bundleVersion).toMatch(/^.+-\d{4}-/);
@@ -128,6 +131,17 @@ describe("Phase 1 — local mode integration", () => {
       const ids = (r.related ?? []).map((e) => e.id);
       expect(ids).toContain("principle:clarity");
     });
+
+    it("returns component metadata with props and examples", async () => {
+      const r = await getEntityHandler.handle(
+        { id: "component:button", resolve_relations: true },
+        ctx(),
+      );
+      expect(r.entity.type).toBe("component");
+      expect(r.entity.data.importPath).toBe("@acme/ui/button");
+      expect(Array.isArray(r.entity.data.props)).toBe(true);
+      expect((r.related ?? []).map((e) => e.id)).toContain("token:color.action.danger");
+    });
   });
 
   describe("list_entities", () => {
@@ -186,6 +200,62 @@ describe("Phase 1 — local mode integration", () => {
       );
       expect(r.ok).toBe(true);
       expect(r.violations).toEqual([]);
+    });
+  });
+
+  describe("enterprise composition tools", () => {
+    it("get_usage returns canonical snippets and constraints", async () => {
+      const r = await getUsageHandler.handle(
+        { id: "component:button", language: "tsx", include_constraints: true },
+        ctx(),
+      );
+      expect(r.importPath).toBe("@acme/ui/button");
+      expect(r.examples.length).toBeGreaterThan(0);
+      expect(r.examples[0]?.code).toMatch(/<Button/);
+      expect(r.constraints.map((c) => c.id)).toContain("button-specific-label");
+    });
+
+    it("validate_composition catches missing and invalid props", async () => {
+      const r = await validateCompositionHandler.handle(
+        {
+          pattern: "pattern:confirmation-dialog",
+          components: [{ id: "component:button", props: { variant: "ghost" } }],
+          tokens: ["token:color.action.danger"],
+        },
+        ctx(),
+      );
+      expect(r.ok).toBe(false);
+      expect(r.violations.some((v) => v.path === "props.children")).toBe(true);
+      expect(r.violations.some((v) => v.path === "props.variant")).toBe(true);
+    });
+
+    it("validate_composition rejects non-pattern ids in the pattern field", async () => {
+      const r = await validateCompositionHandler.handle(
+        {
+          pattern: "component:button",
+          components: [
+            { id: "component:button", props: { variant: "primary", children: "Save changes" } },
+          ],
+          tokens: [],
+        },
+        ctx(),
+      );
+      expect(r.ok).toBe(false);
+      expect(r.violations.some((v) => v.entityId === "component:button")).toBe(true);
+    });
+
+    it("recommend_composition returns an implementation brief", async () => {
+      const r = await recommendCompositionHandler.handle(
+        { intent: "delete project confirmation dialog", framework: "react", limit: 5 },
+        ctx(),
+      );
+      expect(r.recommended.components.map((c) => c.id)).toContain("component:button");
+      expect(r.recommended.patterns.map((p) => p.id)).toContain("pattern:confirmation-dialog");
+      expect(r.recommended.tokens.map((t) => t.id)).toContain("token:color.action.danger");
+      expect(r.constraints.map((c) => c.id)).toContain("button-danger-only-destructive");
+      expect(r.nextSteps).toContain(
+        "Call validate_ui on generated code and repair all error violations.",
+      );
     });
   });
 });

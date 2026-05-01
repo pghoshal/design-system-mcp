@@ -1,0 +1,63 @@
+{
+  "id": "component:button",
+  "type": "component",
+  "name": "Button",
+  "summary": "Action trigger for primary, secondary, and destructive user actions.",
+  "package": "@acme/ui",
+  "importPath": "@acme/ui/button",
+  "status": "stable",
+  "tags": ["action", "form", "confirmation"],
+  "props": [
+    {
+      "name": "variant",
+      "type": "\"primary\" | \"secondary\" | \"danger\"",
+      "required": true,
+      "description": "Visual intent. Use danger only for destructive actions.",
+      "values": ["primary", "secondary", "danger"]
+    },
+    {
+      "name": "size",
+      "type": "\"sm\" | \"md\" | \"lg\"",
+      "required": false,
+      "description": "Button size. Default is md.",
+      "values": ["sm", "md", "lg"],
+      "default": "md"
+    },
+    {
+      "name": "children",
+      "type": "ReactNode",
+      "required": true,
+      "description": "Visible label. Use specific action text."
+    }
+  ],
+  "examples": [
+    {
+      "name": "Destructive confirm action",
+      "language": "tsx",
+      "description": "Use inside a confirmation dialog for destructive actions.",
+      "code": "import { Button } from \"@acme/ui/button\";\n\n<Button variant=\"danger\" size=\"md\">Delete project</Button>"
+    },
+    {
+      "name": "Primary action",
+      "language": "tsx",
+      "code": "import { Button } from \"@acme/ui/button\";\n\n<Button variant=\"primary\" size=\"md\">Save changes</Button>"
+    }
+  ],
+  "constraints": [
+    {
+      "id": "button-specific-label",
+      "severity": "error",
+      "message": "Button labels must name the action and object; avoid vague labels such as Submit.",
+      "rationale": "Specific labels support clarity and accessibility."
+    },
+    {
+      "id": "button-danger-only-destructive",
+      "severity": "error",
+      "message": "Use variant=danger only for destructive or irreversible actions."
+    }
+  ],
+  "tokens": ["token:color.action.primary", "token:color.action.danger"],
+  "principles": ["principle:clarity", "principle:consistency"],
+  "patterns": ["pattern:confirmation-dialog"],
+  "related": []
+}

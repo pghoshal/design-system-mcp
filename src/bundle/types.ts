@@ -75,6 +75,47 @@ export interface PromptTemplate {
   body: string;
 }
 
+export interface UsageExample {
+  name: string;
+  language: string;
+  code: string;
+  description?: string | undefined;
+}
+
+export interface ComponentProp {
+  name: string;
+  type: string;
+  required: boolean;
+  description?: string | undefined;
+  values?: string[] | undefined;
+  default?: string | number | boolean | undefined;
+}
+
+export interface DesignConstraint {
+  id: string;
+  severity: "error" | "warning" | "info";
+  message: string;
+  rationale?: string | undefined;
+}
+
+export interface ComponentMetadata {
+  id: string;
+  type: "component";
+  name: string;
+  summary: string;
+  package?: string | undefined;
+  importPath: string;
+  status: "stable" | "experimental" | "deprecated";
+  tags: string[];
+  props: ComponentProp[];
+  examples: UsageExample[];
+  constraints: DesignConstraint[];
+  tokens: string[];
+  principles: string[];
+  patterns: string[];
+  related: string[];
+}
+
 export type RuleSeverity = "error" | "warning" | "info";
 export type RuleLanguage = "tsx" | "jsx" | "ts" | "js" | "css" | "html" | "vue";
 

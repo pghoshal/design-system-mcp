@@ -31,7 +31,7 @@ This document is the master architecture plan. Detailed governance lives in `.cl
                     │   Design System Git Repo (private) │
                     │   - tokens (DTCG)                  │
                     │   - principles, patterns, voice    │
-                    │   - components (later)             │
+                    │   - component metadata             │
                     │   - manifest schema                │
                     │   - prompts                        │
                     └─────────────────┬──────────────────┘
@@ -45,7 +45,7 @@ This document is the master architecture plan. Detailed governance lives in `.cl
         │     │                                  │           │
         │     ├──► Markdown parse ───────────────┤           │
         │     │                                  │           │
-        │     └──► Component parse (later) ──────┤           │
+        │     └──► Component metadata parse ─────┤           │
         │                                        │           │
         │                                        ▼           │
         │                            ┌────────────────────┐  │
@@ -139,7 +139,7 @@ UX team owns tokens + docs. Engineering owns components + conventions. Both revi
 4. Walk the tree:
    - Resolve tokens via Style Dictionary
    - Parse markdown with gray-matter + remark
-   - Parse component metadata (later phase)
+   - Parse component metadata from `components/*/component.json`
    - Build manifest from `manifest.json` declaration + walked entities
    - Build MiniSearch index in memory
 5. Atomically install the bundle as the current bundle
@@ -177,6 +177,9 @@ describe_schema() → SchemaDefinition
 get_related(id, relation?, direction?) → Entity[]
 resolve_token(query, platform?) → TokenMatch[]
 validate_ui(code, language?, rules?) → ValidationReport   // Phase 3
+get_usage(id, language?, include_constraints?) → CanonicalUsage
+recommend_composition(intent, platform?, framework?, limit?) → ImplementationBrief
+validate_composition(components, pattern?, tokens?) → CompositionValidation
 ```
 
 **Resources** (URI-addressable):
@@ -350,8 +353,14 @@ design-system-mcp/
 - Rules sourced from the design-system repo (`rules/*.json`)
 - Returns structured violations
 
-### Phase 4 — Hardening (Week 5)
-- Component / Storybook story parser (when components exist)
+### Phase 4 — Enterprise hardening (started)
+- Component metadata ingestion from `components/*/component.json`
+- Canonical usage examples, imports, props, and constraints
+- Composition recommendation and composition/prop validation
+
+Completed in the first Phase 4 slice above. Remaining hardening:
+
+- Storybook story parser (when components exist)
 - Test suite (unit + integration with a real fixture)
 - Container build + deployment docs
 
@@ -360,11 +369,35 @@ design-system-mcp/
 - Connect pilot engineers' IDEs
 - Iterate based on observed query patterns
 
+### Phase 6 — Enterprise design consistency
+- Component parser for `.tsx` / `.jsx` public APIs
+- MDX documentation parser
+- Storybook story parser for examples and variants
+- Accessibility validation rules
+- Token usage validation beyond raw hex: raw px, unknown CSS vars, off-scale semantic usage
+- Copy/voice validation rules
+- Dependency/import guidance per component package
+- Rich relation inference: components ↔ tokens ↔ patterns ↔ principles ↔ validation rules
+- Harness workflow docs: discover → recommend → fetch usage → validate composition → generate → validate UI → repair
+
 ### Future (not committed)
 - Figma MCP server alongside (separate concern)
 - Embeddings / semantic search (only if BM25 misses obvious queries)
 - Code Connect mappings
 - Move to multi-instance only if a clear scaling need emerges
+
+## 8.1 Enterprise Feature Parity Notes
+
+Reviewed `PinoNoir/sds-components-mcp` via LobeHub/GitHub listing. Relevant capabilities to absorb, while preserving this project's generic-verb and read-only rules:
+
+| Capability | This project mapping |
+|---|---|
+| Component search | Existing `search_design_system` with `type=component` |
+| Component details | Existing `get_entity` plus `get_usage` |
+| Similar/alternative components | `recommend_composition` and `get_related` |
+| Prop validation | `validate_composition` |
+| Code generation | Out of scope as server-authored code; `get_usage` returns canonical snippets and imports for the harness/LLM to use |
+| Component/story/token/doc parsers | Phase 4-6 parser roadmap, with Style Dictionary retained for tokens |
 
 ---
 
