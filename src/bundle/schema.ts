@@ -243,16 +243,23 @@ export const JsxPropValueDetectorSchema = z
     message: "jsx-prop-value requires allow or disallow",
   });
 
-export const RuleSchema = z.object({
-  id: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[a-z][a-z0-9-]*$/i, "id must match [a-zA-Z][a-zA-Z0-9-]*"),
-  description: z.string().min(1),
-  severity: z.enum(["error", "warning", "info"]).default("warning"),
-  appliesTo: z.array(RuleLanguageSchema).min(1),
-  detector: z.union([RegexDetectorSchema, JsxPropValueDetectorSchema]),
-});
+export const RuleSchema = z
+  .object({
+    id: z
+      .string()
+      .min(1)
+      .max(64)
+      .regex(/^[a-z][a-z0-9-]*$/i, "id must match [a-zA-Z][a-zA-Z0-9-]*"),
+    description: z.string().min(1),
+    severity: z.enum(["error", "warning", "info"]).default("warning"),
+    appliesTo: z.array(RuleLanguageSchema).min(1),
+    detector: z.union([RegexDetectorSchema, JsxPropValueDetectorSchema]),
+  })
+  .refine(
+    (rule) =>
+      rule.detector.type !== "jsx-prop-value" ||
+      rule.appliesTo.every((language) => language === "tsx" || language === "jsx"),
+    { message: "jsx-prop-value rules may only apply to tsx/jsx languages" },
+  );
 
 export type RuleFile = z.infer<typeof RuleSchema>;

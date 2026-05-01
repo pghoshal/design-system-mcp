@@ -16,6 +16,7 @@ interface TypeScriptModule {
   isJsxSelfClosingElement(node: Node): node is JsxSelfClosingElement;
   isIdentifier(node: Node): node is Identifier;
   isStringLiteral(node: Node): node is LiteralNode;
+  isNoSubstitutionTemplateLiteral(node: Node): node is LiteralNode;
   isJsxExpression(node: Node): node is JsxExpression;
   isNumericLiteral(node: Node): node is LiteralNode;
 }
@@ -104,7 +105,7 @@ function runJsxPropValueDetector(
       if (!detector.component || detector.component === component) {
         const attr = jsxAttribute(ts, node, detector.prop);
         if (attr) {
-          const value = attributeValue(ts, sourceFile, attr);
+          const value = attributeValue(ts, attr);
           if (value !== null && violates(detector, value)) {
             const start = attr.getStart(sourceFile);
             const loc = sourceFile.getLineAndCharacterOfPosition(start);
@@ -157,26 +158,19 @@ function jsxAttribute(
   return null;
 }
 
-function attributeValue(
-  ts: TypeScriptModule,
-  sourceFile: SourceFile,
-  attr: JsxAttribute,
-): LiteralValue | null {
+function attributeValue(ts: TypeScriptModule, attr: JsxAttribute): LiteralValue | null {
   if (!attr.initializer) return true;
   const init = attr.initializer;
   if (ts.isStringLiteral(init)) return init.text;
   if (ts.isJsxExpression(init) && init.expression) {
     const expression = init.expression;
     if (ts.isStringLiteral(expression)) return expression.text;
+    if (ts.isNoSubstitutionTemplateLiteral(expression)) return expression.text;
     if (ts.isNumericLiteral(expression)) return Number(expression.text);
     if (expression.kind === ts.SyntaxKind.TrueKeyword) return true;
     if (expression.kind === ts.SyntaxKind.FalseKeyword) return false;
   }
-  const raw = init
-    .getText(sourceFile)
-    .replace(/^\{|\}$/g, "")
-    .replace(/^["']|["']$/g, "");
-  return raw.length > 0 ? raw : null;
+  return null;
 }
 
 function violates(detector: JsxPropValueDetector, value: LiteralValue): boolean {

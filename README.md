@@ -536,7 +536,7 @@ Example `validate_ui` request:
 {
   "code": "const color = '#2563EB';",
   "language": "tsx",
-  "rules": []
+  "rules": ["no-hex-colors"]
 }
 ```
 

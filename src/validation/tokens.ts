@@ -219,7 +219,11 @@ function cssVarViolation(
 }
 
 function isDeprecated(entity: Entity): boolean {
-  return entity.data.deprecated === true || entity.data.deprecated === "true";
+  const value = entity.data.deprecated;
+  if (value === true) return true;
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized.length > 0 && normalized !== "false";
 }
 
 function isTokenLikeCssVar(cssVar: string, tokenStems: ReadonlySet<string>): boolean {

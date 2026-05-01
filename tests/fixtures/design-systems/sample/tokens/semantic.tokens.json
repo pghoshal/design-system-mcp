@@ -16,7 +16,7 @@
         "$value": "{color.action.primary}",
         "$type": "color",
         "$description": "Deprecated primary action alias",
-        "$deprecated": true,
+        "$deprecated": "Use token:color.action.primary instead.",
         "$replacement": "token:color.action.primary"
       }
     },

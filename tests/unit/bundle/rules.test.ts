@@ -112,6 +112,24 @@ describe("loadRules", () => {
     expect(result).toEqual([]);
   });
 
+  it("rejects JSX prop value rules for non-JSX languages", async () => {
+    await writeRule("bad-jsx-language.json", {
+      id: "bad-jsx-language",
+      description: "bad",
+      severity: "error",
+      appliesTo: ["css"],
+      detector: {
+        type: "jsx-prop-value",
+        component: "Button",
+        prop: "variant",
+        disallow: ["ghost"],
+        message: "no ghost",
+      },
+    });
+    const result = await loadRules(tmpDir, logger);
+    expect(result).toEqual([]);
+  });
+
   it("rejects regex rules with invalid patterns", async () => {
     await writeRule("bad-pattern.json", {
       id: "bad-pattern",
