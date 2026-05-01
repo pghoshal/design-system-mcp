@@ -242,24 +242,25 @@ design://prompt/{name}           template
 
 ---
 
-## 13. Violation Repair Suggestions — 🟡 partial, improved
+## 13. Violation Repair Suggestions — ✅ implemented
 
-`Violation` type (`src/bundle/types.ts`) has optional `suggestion?: string`, `replaceWith?: string`, and `provenance?: ViolationProvenance` fields. `validate_ui` exposes those fields in its public output schema (`src/tools/validate-ui.ts`).
+`Violation` type (`src/bundle/types.ts`) has optional `suggestion?: string`, `replaceWith?: string`, `repair?: ViolationRepair`, and `provenance?: ViolationProvenance` fields. `validate_ui` exposes those fields in its public output schema (`src/tools/validate-ui.ts`).
 
 - ✅ accessibility rules (`src/validation/accessibility.ts`)
 - ✅ copy rules (`src/validation/copy.ts`)
-- 🟡 token rules — partial (some return suggestions, some don't)
+- ✅ token rules include deterministic repair for deprecated token aliases when the replacement token resolves
 - ✅ source-repo regex rules now carry provenance (`rulePath`) through `src/validation/regex.ts`
-- 🟡 deterministic `replaceWith` exists only where a single correct edit is known, e.g. removing `autoFocus`
+- ✅ deterministic `replaceWith` exists where a single correct edit is known, e.g. removing `autoFocus` or replacing a deprecated token CSS var
+- ✅ deterministic before/after `repair` snippets are attached centrally for every violation with `replaceWith`
+- ✅ CI JSON and SARIF include repair metadata when available
 
-What's NOT in the suggestion:
+Deliberate boundary:
 
-- 🟡 machine-readable replacement is present for a subset of rules, not all violations
-- 🟡 source-entity reference exists for token primitive warnings and copy/voice violations, but not all rules have a natural entity target
-- ❌ before/after snippet
-- ❌ structured severity hierarchy beyond `error | warning | info`
+- ✅ machine-readable replacement is present only when there is exactly one safe edit
+- ✅ rules that require design/product judgment return `suggestion` but no auto-fix
+- ✅ source-entity references exist when a natural source entity exists
 
-**Status:** structured repair payload is now part of the `validate_ui` contract, but coverage is intentionally conservative.
+**Status:** structured repair payloads are first-class and deterministic. Non-deterministic findings intentionally remain suggestions only.
 
 ---
 
@@ -493,7 +494,7 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 | 10 | MCP prompts | ✅ wiring complete + starter prompt set |
 | 11 | Similarity / alternatives | ✅ explicit alternatives + provenance |
 | 12 | Deterministic decision explanations | ✅ `explain_decision` tool |
-| 13 | Violation repair suggestions | 🟡 structured payload exists for selected rules; no before/after snippets |
+| 13 | Violation repair suggestions | ✅ deterministic replaceWith + before/after repair payloads |
 | 14 | Copy / voice validator | ✅ 4 rules (no glossary / reading-level / per-surface tone) |
 | 15 | Design decision trace | ✅ validation + recommendation provenance |
 | 16 | Component dependency / import guidance | ✅ schema'd; surfaced via `get_usage` |
@@ -506,7 +507,7 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 | 23 | Strict schema specs | 🟡 strong for component / pattern / rule; weak for token / migration / platform |
 | 24 | Harness-enforced modes | 🟡 `design://workflow` published; hard blocking remains client-side |
 
-**Tally:** 16 ✅ · 8 🟡 · 0 ❌ (out of 24).
+**Tally:** 17 ✅ · 7 🟡 · 0 ❌ (out of 24).
 
 The remaining major-gap set has no fully missing server-side item. The hard parts left are depth expansions:
 
@@ -522,14 +523,13 @@ For each item that's worth promoting from 🟡 to ✅, the cheapest path is:
 | #4 Accessibility → dialog / contrast | Add dialog focus/escape and token-based contrast rules to `accessibility.ts` |
 | #5 Tokens → category enforcement | Add a rule keyed off the token's `$type` field |
 | #7 Pattern contract → +copy + interaction | Extend `PatternContractSchema` with `copyRules: string[]`, `interactionRules: string[]` |
-| #13 Repair → structured | Extend `replaceWith` coverage and add before/after snippets where fixes are deterministic |
 | #17 Deprecation → component replacement | Add replacement fields to component schemas and migration examples |
 | #22 Coverage → token-usage | Add unused-token and deprecated-token target checks in `inspect-coverage.ts` |
 
 If you want any of these landed, the cheapest 5 in priority order would be:
 
-1. **#13 Structured repair suggestions** — extend `replaceWith` beyond autofocus and add before/after snippets.
-2. **#5 Semantic token category enforcement** — detect color tokens in spacing/layout slots and spacing tokens in color slots.
-3. **#6 Composition ordering/state/platform constraints** — add machine-checkable contract fields before enforcing them.
+1. **#5 Semantic token category enforcement** — detect color tokens in spacing/layout slots and spacing tokens in color slots.
+2. **#6 Composition ordering/state/platform constraints** — add machine-checkable contract fields before enforcing them.
+3. **#17 Deprecation and migration** — add component-level replacement chains and migration examples.
 
 Each is a discrete slice that fits a TDD-RED→GREEN→Critic cycle.

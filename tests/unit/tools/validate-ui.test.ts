@@ -251,7 +251,40 @@ describe("validate_ui", () => {
       "a11y-no-autofocus",
     ]);
     expect(r.violations[1]?.replaceWith).toBe("<input aria-label='Search' tabIndex={2}/>");
+    expect(r.violations[1]?.repair).toEqual({
+      operation: "replace",
+      before: "<input aria-label='Search' tabIndex={2} autoFocus />",
+      after: "<input aria-label='Search' tabIndex={2}/>",
+    });
     expect(r.violations[1]?.provenance).toEqual({ ruleSource: "built-in" });
+  });
+
+  it("returns deterministic repair snippets for deprecated token variables", async () => {
+    const r = await handler.handle(
+      {
+        code: ".x { color: var(--color-action-legacyPrimary, var(--color-action-primary)); }",
+        language: "css",
+        rules: ["no-deprecated-tokens"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.violations).toHaveLength(1);
+    expect(r.violations[0]).toMatchObject({
+      ruleId: "no-deprecated-tokens",
+      match: "var(--color-action-legacyPrimary, var(--color-action-primary))",
+      replaceWith: "var(--color-action-primary, var(--color-action-primary))",
+      repair: {
+        operation: "replace",
+        before: "var(--color-action-legacyPrimary, var(--color-action-primary))",
+        after: "var(--color-action-primary, var(--color-action-primary))",
+      },
+      provenance: {
+        ruleSource: "built-in",
+        sourceEntity: "token:color.action.legacyPrimary",
+        sourceEntityPath: "tokens/semantic.tokens.json",
+      },
+    });
   });
 
   it("reports blame language in UI copy", async () => {

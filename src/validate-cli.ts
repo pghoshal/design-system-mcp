@@ -265,6 +265,7 @@ function toSarif(
           match: violation.match,
           suggestion: violation.suggestion,
           replaceWith: violation.replaceWith,
+          repair: violation.repair,
           provenance: violation.provenance,
         },
       });

@@ -202,12 +202,17 @@ function cssVarViolation(
   }
   if (token && activeRules.includes("no-deprecated-tokens") && isDeprecated(token.entity)) {
     const replacement = token.entity.data.replacement;
+    const replacementCssVar =
+      typeof replacement === "string" ? replacementCssVarFor(replacement, tokenIndex) : undefined;
     return {
       ruleId: "no-deprecated-tokens",
       severity: "error",
       message: `${cssVar} is deprecated.`,
       match: usage.match,
       ...(typeof replacement === "string" ? { suggestion: `Use ${replacement} instead.` } : {}),
+      ...(replacementCssVar !== undefined
+        ? { replaceWith: usage.match.replace(usage.cssVar, replacementCssVar) }
+        : {}),
       provenance: {
         ruleSource: "built-in",
         sourceEntity: token.entity.id,
@@ -216,6 +221,14 @@ function cssVarViolation(
     };
   }
   return null;
+}
+
+function replacementCssVarFor(replacement: string, tokenIndex: CssTokenIndex): string | undefined {
+  const entityId = replacement.startsWith("token:") ? replacement : `token:${replacement}`;
+  for (const token of tokenIndex.tokens.values()) {
+    if (token.entity.id === entityId) return token.cssVar;
+  }
+  return undefined;
 }
 
 function isDeprecated(entity: Entity): boolean {

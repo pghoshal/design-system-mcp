@@ -211,6 +211,14 @@ export interface ViolationProvenance {
   sourceEntityPath?: string | undefined;
 }
 
+export interface ViolationRepair {
+  operation: "replace";
+  /** Exact text that should be replaced. Defaults to `match` for validators that can localize it. */
+  before: string;
+  /** Exact replacement text. Mirrors `replaceWith` for backwards compatibility. */
+  after: string;
+}
+
 export interface Violation {
   ruleId: string;
   severity: RuleSeverity;
@@ -227,6 +235,8 @@ export interface Violation {
    * IDE consumers may apply the substitution at `(line, column, match.length)`.
    */
   replaceWith?: string | undefined;
+  /** Deterministic before/after repair payload for harnesses and IDEs. */
+  repair?: ViolationRepair | undefined;
   /** Where the rule + linked entity come from. See ViolationProvenance. */
   provenance?: ViolationProvenance | undefined;
 }

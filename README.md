@@ -563,6 +563,23 @@ Example `validate_ui` request:
 - `copy-no-vague-actions` warns on vague action labels such as "Submit" or "Process".
 - `copy-no-destructive-hedging` warns when destructive copy uses hedging language.
 
+When a violation has one deterministic edit, the response includes `replaceWith` and a structured `repair` payload:
+
+```json
+{
+  "ruleId": "no-deprecated-tokens",
+  "match": "var(--color-action-legacyPrimary)",
+  "replaceWith": "var(--color-action-primary)",
+  "repair": {
+    "operation": "replace",
+    "before": "var(--color-action-legacyPrimary)",
+    "after": "var(--color-action-primary)"
+  }
+}
+```
+
+Rules that require product judgment still return human-readable `suggestion` text without an auto-fix.
+
 Recommended harness flow for stronger design consistency:
 
 1. Call `describe_schema`.

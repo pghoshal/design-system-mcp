@@ -73,6 +73,33 @@ describe("validate CLI", () => {
     });
   });
 
+  it("prints deterministic repair payloads when a violation is auto-fixable", async () => {
+    const file = path.join(tmpDir, "deprecated-token.css");
+    await fs.writeFile(
+      file,
+      ".x { color: var(--color-action-legacyPrimary, var(--color-action-primary)); }\n",
+      "utf8",
+    );
+
+    await expect(
+      execFileAsync(TSX_BIN, [
+        ENTRY,
+        "--source",
+        FIXTURE,
+        "--format",
+        "json",
+        "--rules",
+        "no-deprecated-tokens",
+        file,
+      ]),
+    ).rejects.toMatchObject({
+      code: 1,
+      stdout: expect.stringContaining(
+        '"after": "var(--color-action-primary, var(--color-action-primary))"',
+      ),
+    });
+  });
+
   it("prints SARIF for code-scanning integrations", async () => {
     const file = path.join(tmpDir, "bad.tsx");
     await fs.writeFile(file, "const color = '#2563EB';\n", "utf8");
@@ -82,6 +109,27 @@ describe("validate CLI", () => {
     ).rejects.toMatchObject({
       code: 1,
       stdout: expect.stringContaining('"version": "2.1.0"'),
+    });
+  });
+
+  it("includes repair payloads in SARIF properties when available", async () => {
+    const file = path.join(tmpDir, "deprecated-token.css");
+    await fs.writeFile(file, ".x { color: var(--color-action-legacyPrimary); }\n", "utf8");
+
+    await expect(
+      execFileAsync(TSX_BIN, [
+        ENTRY,
+        "--source",
+        FIXTURE,
+        "--format",
+        "sarif",
+        "--rules",
+        "no-deprecated-tokens",
+        file,
+      ]),
+    ).rejects.toMatchObject({
+      code: 1,
+      stdout: expect.stringContaining('"repair": {'),
     });
   });
 

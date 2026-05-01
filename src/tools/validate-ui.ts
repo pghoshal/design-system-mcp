@@ -24,6 +24,13 @@ const ViolationSchema = z.object({
   match: z.string().optional(),
   suggestion: z.string().optional(),
   replaceWith: z.string().optional(),
+  repair: z
+    .object({
+      operation: z.literal("replace"),
+      before: z.string(),
+      after: z.string(),
+    })
+    .optional(),
   provenance: z
     .object({
       ruleSource: z.enum(["built-in", "source-repo"]),
@@ -87,6 +94,20 @@ export const handler: ToolHandler<typeof ValidateUiInput, typeof ValidateUiOutpu
     violations.push(...accessibility.violations);
     const copy = runCopyValidation(bundle, args.code, args.language, requested);
     violations.push(...copy.violations);
+
+    for (const violation of violations) {
+      if (
+        violation.repair === undefined &&
+        violation.replaceWith !== undefined &&
+        violation.match !== undefined
+      ) {
+        violation.repair = {
+          operation: "replace",
+          before: violation.match,
+          after: violation.replaceWith,
+        };
+      }
+    }
 
     violations.sort((a, b) => {
       const la = a.line ?? 0;
