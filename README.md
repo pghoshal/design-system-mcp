@@ -251,6 +251,30 @@ contract:
     - token:color.action.danger
   requiredPrinciples:
     - principle:clarity
+  componentOrder:
+    - component:card
+    - component:button
+  propRequirements:
+    - component: component:button
+      prop: variant
+      equals: danger
+      severity: error
+      message: Confirmation dialog confirm action must use the danger button variant.
+  parentChildRules:
+    - parent: component:card
+      child: component:button
+      relationship: required
+      severity: error
+      message: Confirmation action must be nested inside the dialog container.
+  platformRequirements:
+    - platform: web
+      framework: react
+      requiredComponents:
+        - component:card
+      forbiddenComponents:
+        - component:button-group
+      requiredTokens:
+        - token:color.surface.default
   slots:
     - name: confirm-action
       required: true

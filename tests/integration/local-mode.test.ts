@@ -655,14 +655,114 @@ describe("Phase 1 — local mode integration", () => {
       expect(r.violations.some((v) => v.path === "tokens")).toBe(true);
     });
 
-    it("validate_composition passes a complete confirmation-dialog contract", async () => {
+    it("validate_composition enforces order, prop, and platform contract rules", async () => {
+      const r = await validateCompositionHandler.handle(
+        {
+          pattern: "pattern:confirmation-dialog",
+          platform: "web",
+          framework: "react",
+          components: [
+            { id: "component:button", props: { variant: "primary", children: "Delete project" } },
+            { id: "component:card", props: { title: "Delete project?", tone: "elevated" } },
+            { id: "component:button-group", props: {} },
+          ],
+          tokens: ["token:color.action.danger"],
+        },
+        ctx(),
+      );
+      expect(r.ok).toBe(false);
+      expect(r.violations).toContainEqual(
+        expect.objectContaining({
+          path: "components.order",
+          message: expect.stringContaining("must appear before"),
+        }),
+      );
+      expect(r.violations).toContainEqual(
+        expect.objectContaining({
+          path: "components.component:button.props.variant",
+          message: "Confirmation dialog confirm action must use the danger button variant.",
+        }),
+      );
+      expect(r.violations).toContainEqual(
+        expect.objectContaining({
+          path: "components.parent",
+          message: "Confirmation action must be nested inside the dialog container.",
+        }),
+      );
+      expect(r.violations).toContainEqual(
+        expect.objectContaining({
+          path: "platform.web.react.forbiddenComponents",
+          message: expect.stringContaining("forbids component 'component:button-group'"),
+        }),
+      );
+      expect(r.violations).toContainEqual(
+        expect.objectContaining({
+          path: "platform.web.react.requiredTokens",
+          message: expect.stringContaining("requires token 'token:color.surface.default'"),
+        }),
+      );
+    });
+
+    it("validate_composition enforces contract rules across repeated component usages", async () => {
       const r = await validateCompositionHandler.handle(
         {
           pattern: "pattern:confirmation-dialog",
           components: [
-            { id: "component:button", props: { variant: "danger", children: "Delete project" } },
+            {
+              id: "component:button",
+              instanceId: "early-confirm",
+              parent: "component:card",
+              props: { variant: "danger", children: "Delete project" },
+            },
+            { id: "component:card", props: { title: "Delete project?", tone: "danger" } },
+            {
+              id: "component:button",
+              instanceId: "late-confirm",
+              props: { variant: "primary", children: "Delete project" },
+            },
           ],
           tokens: ["token:color.action.danger"],
+        },
+        ctx(),
+      );
+
+      expect(r.ok).toBe(false);
+      expect(r.violations).toContainEqual(
+        expect.objectContaining({
+          path: "components.order",
+          message:
+            "component:card must appear before every component:button for pattern:confirmation-dialog.",
+        }),
+      );
+      expect(r.violations).toContainEqual(
+        expect.objectContaining({
+          path: "components.component:button.props.variant",
+          message: "Confirmation dialog confirm action must use the danger button variant.",
+        }),
+      );
+      expect(r.violations).toContainEqual(
+        expect.objectContaining({
+          path: "components.parent",
+          message: "Confirmation action must be nested inside the dialog container.",
+        }),
+      );
+    });
+
+    it("validate_composition passes a complete confirmation-dialog contract", async () => {
+      const r = await validateCompositionHandler.handle(
+        {
+          pattern: "pattern:confirmation-dialog",
+          platform: "web",
+          framework: "react",
+          components: [
+            { id: "component:card", props: { title: "Delete project?", tone: "danger" } },
+            {
+              id: "component:button",
+              parent: "component:card",
+              props: { variant: "danger", children: "Delete project" },
+            },
+          ],
+          tokens: ["token:color.action.danger", "token:color.surface.default"],
         },
         ctx(),
       );

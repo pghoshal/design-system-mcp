@@ -108,22 +108,23 @@ no-deprecated-tokens
 
 ---
 
-## 6. Composition Validator v2 — 🟡 partial
+## 6. Composition Validator v2 — ✅ implemented
 
-`src/tools/validate-composition.ts` (237 LOC) enforces against pattern `data.contract`:
+`src/tools/validate-composition.ts` enforces against pattern `data.contract`:
 
 - ✅ required components
 - ✅ forbidden components
 - ✅ required tokens (component must declare them in its metadata)
 - ✅ required principles
 - ✅ slots (each named slot must be filled by the right component)
-- ❌ allowed parent/child relationships
-- ❌ required ordering / layout
-- ❌ state combinations
-- ❌ platform/framework-specific constraints
-- ❌ free-form `constraints` are loaded from contract but only surfaced as guidance, not enforced (see comment in source: `Free-form contract constraints are guidance unless/until they have a [machine-checkable detector]`)
+- ✅ required component ordering via `componentOrder`
+- ✅ required prop/state combinations via `propRequirements` (`equals` / `oneOf`)
+- ✅ parent/child relationships via `parentChildRules`
+- ✅ platform/framework-specific constraints via `platformRequirements`
+- ✅ contract target coverage includes the new fields in `inspect_coverage`
+- ✅ free-form `constraints` remain guidance unless represented by a machine-checkable field
 
-**Status:** structural composition (presence/absence/slots) works. Behavioral, ordering, and platform-conditional constraints don't.
+**Status:** structural, ordering/layout, prop/state, parent-child, and platform-conditional composition constraints are machine-checkable. Free-form natural-language constraints intentionally remain guidance until modeled explicitly.
 
 ---
 
@@ -487,7 +488,7 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 | 3 | MDX documentation parser | ✅ search-clean body + structured do/don't / accessibility / migration / props |
 | 4 | Accessibility rule engine | ✅ 7 rules (ARIA roles included; no dialog focus / contrast) |
 | 5 | Semantic token validator | ✅ 5 rules (deprecated tokens included; no category enforcement / per-component allowlists) |
-| 6 | Composition validator v2 | 🟡 partial (structural; no ordering / state / platform) |
+| 6 | Composition validator v2 | ✅ structural + ordering/layout + prop/state + parent-child + platform/framework constraints |
 | 7 | Pattern contract schema | ✅ structural shape (no interaction / copy / a11y fields) |
 | 8 | Design brief / harness contract | ✅ `nextSteps` plus `design://workflow`; enforcement is harness-side |
 | 9 | MCP resources | ✅ all entity types + per-type templates + `design://workflow` |
@@ -507,7 +508,7 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 | 23 | Strict schema specs | 🟡 strong for component / pattern / rule; weak for token / migration / platform |
 | 24 | Harness-enforced modes | 🟡 `design://workflow` published; hard blocking remains client-side |
 
-**Tally:** 17 ✅ · 7 🟡 · 0 ❌ (out of 24).
+**Tally:** 18 ✅ · 6 🟡 · 0 ❌ (out of 24).
 
 The remaining major-gap set has no fully missing server-side item. The hard parts left are depth expansions:
 
@@ -529,7 +530,7 @@ For each item that's worth promoting from 🟡 to ✅, the cheapest path is:
 If you want any of these landed, the cheapest 5 in priority order would be:
 
 1. **#5 Semantic token category enforcement** — detect color tokens in spacing/layout slots and spacing tokens in color slots.
-2. **#6 Composition ordering/state/platform constraints** — add machine-checkable contract fields before enforcing them.
-3. **#17 Deprecation and migration** — add component-level replacement chains and migration examples.
+2. **#17 Deprecation and migration** — add component-level replacement chains and migration examples.
+3. **#19 Bundle quality checks** — add stale replacement and example compile sanity checks.
 
 Each is a discrete slice that fits a TDD-RED→GREEN→Critic cycle.

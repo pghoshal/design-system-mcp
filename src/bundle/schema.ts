@@ -201,6 +201,43 @@ export const PatternContractSlotSchema = z
   })
   .strict();
 
+const JsonPrimitiveSchema = z.union([z.string(), z.number(), z.boolean()]);
+
+export const PatternPropRequirementSchema = z
+  .object({
+    component: z.string().min(1).max(256),
+    prop: z.string().min(1).max(128),
+    equals: JsonPrimitiveSchema.optional(),
+    oneOf: z.array(JsonPrimitiveSchema).min(1).optional(),
+    severity: z.enum(["error", "warning", "info"]).default("error"),
+    message: z.string().min(1).max(2_000).optional(),
+  })
+  .strict()
+  .refine((value) => (value.equals !== undefined) !== (value.oneOf !== undefined), {
+    message: "prop requirement requires exactly one of equals or oneOf",
+  });
+
+export const PlatformRequirementSchema = z
+  .object({
+    platform: z.string().min(1).max(64),
+    framework: z.string().min(1).max(64).optional(),
+    requiredComponents: z.array(z.string().min(1).max(256)).default([]),
+    forbiddenComponents: z.array(z.string().min(1).max(256)).default([]),
+    requiredTokens: z.array(z.string().min(1).max(256)).default([]),
+    propRequirements: z.array(PatternPropRequirementSchema).default([]),
+  })
+  .strict();
+
+export const ParentChildRuleSchema = z
+  .object({
+    parent: z.string().min(1).max(256),
+    child: z.string().min(1).max(256),
+    relationship: z.enum(["required", "forbidden"]),
+    severity: z.enum(["error", "warning", "info"]).default("error"),
+    message: z.string().min(1).max(2_000).optional(),
+  })
+  .strict();
+
 export const PatternContractSchema = z
   .object({
     requiredComponents: z.array(z.string().min(1).max(256)).default([]),
@@ -208,6 +245,10 @@ export const PatternContractSchema = z
     forbiddenComponents: z.array(z.string().min(1).max(256)).default([]),
     requiredTokens: z.array(z.string().min(1).max(256)).default([]),
     requiredPrinciples: z.array(z.string().min(1).max(256)).default([]),
+    componentOrder: z.array(z.string().min(1).max(256)).default([]),
+    propRequirements: z.array(PatternPropRequirementSchema).default([]),
+    platformRequirements: z.array(PlatformRequirementSchema).default([]),
+    parentChildRules: z.array(ParentChildRuleSchema).default([]),
     slots: z.array(PatternContractSlotSchema).default([]),
     constraints: z.array(DesignConstraintSchema).default([]),
   })

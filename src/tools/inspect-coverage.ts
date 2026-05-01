@@ -166,6 +166,26 @@ function patternIssues(bundle: Bundle): CoverageIssue[] {
           forbiddenComponents?: string[] | undefined;
           requiredTokens?: string[] | undefined;
           requiredPrinciples?: string[] | undefined;
+          componentOrder?: string[] | undefined;
+          propRequirements?:
+            | Array<{ component?: string | undefined; prop?: string | undefined }>
+            | undefined;
+          platformRequirements?:
+            | Array<{
+                requiredComponents?: string[] | undefined;
+                forbiddenComponents?: string[] | undefined;
+                requiredTokens?: string[] | undefined;
+                propRequirements?:
+                  | Array<{ component?: string | undefined; prop?: string | undefined }>
+                  | undefined;
+              }>
+            | undefined;
+          parentChildRules?:
+            | Array<{
+                parent?: string | undefined;
+                child?: string | undefined;
+              }>
+            | undefined;
         }
       | undefined;
     if (!contract) {
@@ -185,6 +205,21 @@ function patternIssues(bundle: Bundle): CoverageIssue[] {
       ...(contract.forbiddenComponents ?? []),
       ...(contract.requiredTokens ?? []),
       ...(contract.requiredPrinciples ?? []),
+      ...(contract.componentOrder ?? []),
+      ...(contract.propRequirements ?? [])
+        .map((requirement) => requirement.component)
+        .filter((id): id is string => typeof id === "string"),
+      ...(contract.platformRequirements ?? []).flatMap((requirement) => [
+        ...(requirement.requiredComponents ?? []),
+        ...(requirement.forbiddenComponents ?? []),
+        ...(requirement.requiredTokens ?? []),
+        ...(requirement.propRequirements ?? [])
+          .map((propRequirement) => propRequirement.component)
+          .filter((id): id is string => typeof id === "string"),
+      ]),
+      ...(contract.parentChildRules ?? []).flatMap((rule) =>
+        [rule.parent, rule.child].filter((id): id is string => typeof id === "string"),
+      ),
     ]) {
       if (bundle.entities.has(id)) continue;
       issues.push({
@@ -193,6 +228,34 @@ function patternIssues(bundle: Bundle): CoverageIssue[] {
         entityId: entity.id,
         type: entity.type,
         message: `${entity.id} pattern contract references missing entity ${id}.`,
+      });
+    }
+    for (const requirement of [
+      ...(contract.propRequirements ?? []),
+      ...(contract.platformRequirements ?? []).flatMap(
+        (platformRequirement) => platformRequirement.propRequirements ?? [],
+      ),
+    ]) {
+      if (!requirement.component) continue;
+      const component = bundle.entities.get(requirement.component);
+      if (!component || component.type !== "component") continue;
+      const props = component.data.props;
+      const propExists =
+        Array.isArray(props) &&
+        props.some(
+          (prop) =>
+            typeof prop === "object" &&
+            prop !== null &&
+            "name" in prop &&
+            prop.name === requirement.prop,
+        );
+      if (propExists) continue;
+      issues.push({
+        id: "pattern-contract-prop-target-missing",
+        severity: "error",
+        entityId: entity.id,
+        type: entity.type,
+        message: `${entity.id} pattern contract references missing prop ${requirement.component}.${requirement.prop}.`,
       });
     }
   }

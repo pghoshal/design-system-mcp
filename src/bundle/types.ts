@@ -150,12 +150,42 @@ export interface PatternContractSlot {
   description?: string | undefined;
 }
 
+export interface PatternPropRequirement {
+  component: string;
+  prop: string;
+  equals?: string | number | boolean | undefined;
+  oneOf?: Array<string | number | boolean> | undefined;
+  severity: RuleSeverity;
+  message?: string | undefined;
+}
+
+export interface PlatformRequirement {
+  platform: string;
+  framework?: string | undefined;
+  requiredComponents: string[];
+  forbiddenComponents: string[];
+  requiredTokens: string[];
+  propRequirements: PatternPropRequirement[];
+}
+
+export interface ParentChildRule {
+  parent: string;
+  child: string;
+  relationship: "required" | "forbidden";
+  severity: RuleSeverity;
+  message?: string | undefined;
+}
+
 export interface PatternContract {
   requiredComponents: string[];
   optionalComponents: string[];
   forbiddenComponents: string[];
   requiredTokens: string[];
   requiredPrinciples: string[];
+  componentOrder: string[];
+  propRequirements: PatternPropRequirement[];
+  platformRequirements: PlatformRequirement[];
+  parentChildRules: ParentChildRule[];
   slots: PatternContractSlot[];
   constraints: DesignConstraint[];
 }
