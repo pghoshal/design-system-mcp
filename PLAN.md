@@ -374,8 +374,8 @@ Completed in the first Phase 4 slice above. Remaining hardening:
 - Component parser for `.tsx` / `.jsx` public APIs
 - MDX documentation parser
 - Storybook story parser for examples and variants
-- Accessibility validation rules
-- Semantic token validation beyond raw hex: raw length values, raw color functions, unknown CSS vars, primitive token warnings
+- Implemented: accessibility validation rules for image alt text, accessible names, labels, tabindex, autofocus
+- Implemented: semantic token validation beyond raw hex for raw length values, raw color functions, unknown CSS vars, primitive token warnings
 - Copy/voice validation rules
 - Dependency/import guidance per component package
 - Rich relation inference: components ↔ tokens ↔ patterns ↔ principles ↔ validation rules

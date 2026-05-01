@@ -3,8 +3,11 @@ import { RuleLanguageSchema } from "../bundle/schema.js";
 import type { Violation } from "../bundle/types.js";
 import type { ToolHandler } from "../server/types.js";
 import { ToolError } from "../util/errors.js";
+import { ACCESSIBILITY_RULE_IDS, runAccessibilityValidation } from "../validation/accessibility.js";
 import { runRegexDetector } from "../validation/regex.js";
 import { SEMANTIC_TOKEN_RULE_IDS, runSemanticTokenValidation } from "../validation/tokens.js";
+
+const BUILT_IN_RULE_IDS = [...SEMANTIC_TOKEN_RULE_IDS, ...ACCESSIBILITY_RULE_IDS] as const;
 
 const ViolationSchema = z.object({
   ruleId: z.string(),
@@ -41,7 +44,7 @@ export const handler: ToolHandler<typeof ValidateUiInput, typeof ValidateUiOutpu
 
     // If caller asked for specific rules, every requested id must exist.
     if (args.rules.length > 0) {
-      const known = new Set([...allRules.map((r) => r.id), ...SEMANTIC_TOKEN_RULE_IDS]);
+      const known = new Set([...allRules.map((r) => r.id), ...BUILT_IN_RULE_IDS]);
       for (const id of args.rules) {
         if (!known.has(id)) {
           throw new ToolError("invalid_input", `unknown rule id: ${id}`);
@@ -63,6 +66,8 @@ export const handler: ToolHandler<typeof ValidateUiInput, typeof ValidateUiOutpu
     }
     const semantic = runSemanticTokenValidation(bundle, args.code, args.language, requested);
     violations.push(...semantic.violations);
+    const accessibility = runAccessibilityValidation(args.code, args.language, requested);
+    violations.push(...accessibility.violations);
 
     violations.sort((a, b) => {
       const la = a.line ?? 0;
@@ -76,7 +81,7 @@ export const handler: ToolHandler<typeof ValidateUiInput, typeof ValidateUiOutpu
     return {
       ok,
       violations,
-      ranRules: [...applicable.map((r) => r.id), ...semantic.ranRules],
+      ranRules: [...applicable.map((r) => r.id), ...semantic.ranRules, ...accessibility.ranRules],
       bundleVersion: bundle.version,
     };
   },

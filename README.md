@@ -37,7 +37,7 @@ Not implemented yet:
 - TypeScript component API parser
 - Storybook story parser
 - MDX documentation parser
-- Advanced accessibility/copy/token semantic validators
+- Copy/voice validators
 - MCP resources and prompt registration beyond loaded prompt data
 - Production hardening docs and rollout playbooks
 
@@ -463,12 +463,18 @@ Example `validate_ui` request:
 }
 ```
 
-`validate_ui` also runs built-in semantic token checks:
+`validate_ui` also runs built-in semantic token and accessibility checks:
 
 - `no-raw-length-values` blocks raw `px`, `rem`, and `em` values.
 - `no-raw-color-functions` blocks raw `rgb()`, `rgba()`, `hsl()`, and `hsla()` values.
 - `no-unknown-css-vars` blocks token-like CSS variables that do not resolve to known design tokens.
 - `prefer-semantic-tokens` warns when app code uses primitive tokens instead of semantic aliases.
+- `a11y-img-alt` requires images to have alt text or another accessible name.
+- `a11y-button-name` requires buttons to have visible text or an accessible name.
+- `a11y-link-name` requires links to have visible text or an accessible name.
+- `a11y-form-control-label` requires inputs, selects, and textareas to have labels or accessible names.
+- `a11y-no-positive-tabindex` blocks positive tab order overrides.
+- `a11y-no-autofocus` warns when markup uses autofocus.
 
 Recommended harness flow for stronger design consistency:
 

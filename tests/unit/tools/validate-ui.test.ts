@@ -145,6 +145,108 @@ describe("validate_ui", () => {
     expect(r.violations[0]?.ruleId).toBe("no-unknown-css-vars");
   });
 
+  it("reports images without accessible text", async () => {
+    const r = await handler.handle(
+      {
+        code: ["<img", "  src='/hero.png'", "/>"].join("\n"),
+        language: "tsx",
+        rules: ["a11y-img-alt"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.violations).toHaveLength(1);
+    expect(r.violations[0]?.ruleId).toBe("a11y-img-alt");
+  });
+
+  it("accepts decorative images with empty alt text", async () => {
+    const r = await handler.handle(
+      {
+        code: "<img src='/divider.png' alt='' />",
+        language: "tsx",
+        rules: ["a11y-img-alt"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.violations).toEqual([]);
+  });
+
+  it("accepts named interactive elements", async () => {
+    const r = await handler.handle(
+      {
+        code: [
+          "<img src='/hero.png' alt='Dashboard overview' />",
+          "<button><span>Save</span></button>",
+          "<a href='/settings'><span>Settings</span></a>",
+          "<input aria-label='Email address' />",
+        ].join("\n"),
+        language: "tsx",
+        rules: ["a11y-img-alt", "a11y-button-name", "a11y-link-name", "a11y-form-control-label"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.violations).toEqual([]);
+  });
+
+  it("reports unnamed buttons and links", async () => {
+    const r = await handler.handle(
+      {
+        code: ["<button><Icon /></button>", "<a href='/next'><ChevronRight /></a>"].join("\n"),
+        language: "tsx",
+        rules: ["a11y-button-name", "a11y-link-name"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.violations.map((v) => v.ruleId)).toEqual(["a11y-button-name", "a11y-link-name"]);
+  });
+
+  it("reports unlabeled form controls", async () => {
+    const r = await handler.handle(
+      {
+        code: "<input id='email' type='email' />",
+        language: "tsx",
+        rules: ["a11y-form-control-label"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.violations[0]?.ruleId).toBe("a11y-form-control-label");
+  });
+
+  it("accepts form controls associated with labels", async () => {
+    const r = await handler.handle(
+      {
+        code: ["<label htmlFor='email'>Email</label>", "<input id='email' type='email' />"].join(
+          "\n",
+        ),
+        language: "tsx",
+        rules: ["a11y-form-control-label"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(true);
+    expect(r.violations).toEqual([]);
+  });
+
+  it("reports positive tabindex and autofocus", async () => {
+    const r = await handler.handle(
+      {
+        code: "<input aria-label='Search' tabIndex={2} autoFocus />",
+        language: "tsx",
+        rules: ["a11y-no-positive-tabindex", "a11y-no-autofocus"],
+      },
+      ctx(),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.violations.map((v) => v.ruleId)).toEqual([
+      "a11y-no-positive-tabindex",
+      "a11y-no-autofocus",
+    ]);
+  });
+
   it("reports a hex-color violation with line/column", async () => {
     const r = await handler.handle(
       {
