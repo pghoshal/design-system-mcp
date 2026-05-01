@@ -347,7 +347,7 @@ export interface CardProps {
 
 ### Validation Rules
 
-Rules live under `rules/*.json`. Phase 3 supports regex detectors.
+Rules live under `rules/*.json`. Source repos can define regex detectors for simple text checks and AST-backed JSX prop value detectors for component API constraints.
 
 ```json
 {
@@ -364,6 +364,22 @@ Rules live under `rules/*.json`. Phase 3 supports regex detectors.
 ```
 
 Invalid JSON, schema-invalid rules, duplicate rule IDs, invalid regex patterns, and invalid regex flags are skipped with structured warnings.
+
+```json
+{
+  "id": "no-button-ghost-variant",
+  "description": "Button variant must be one of the design-system variants.",
+  "severity": "error",
+  "appliesTo": ["tsx", "jsx"],
+  "detector": {
+    "type": "jsx-prop-value",
+    "component": "Button",
+    "prop": "variant",
+    "disallow": ["ghost"],
+    "message": "Button variant '{value}' is not in the design system."
+  }
+}
+```
 
 ## Configuration
 
@@ -530,6 +546,7 @@ Example `validate_ui` request:
 - `no-raw-color-functions` blocks raw `rgb()`, `rgba()`, `hsl()`, and `hsla()` values.
 - `no-unknown-css-vars` blocks token-like CSS variables that do not resolve to known design tokens.
 - `prefer-semantic-tokens` warns when app code uses primitive tokens instead of semantic aliases.
+- `no-deprecated-tokens` blocks deprecated token aliases and suggests replacements when declared.
 - `a11y-img-alt` requires images to have alt text or another accessible name.
 - `a11y-button-name` requires buttons to have visible text or an accessible name.
 - `a11y-link-name` requires links to have visible text or an accessible name.

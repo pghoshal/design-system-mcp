@@ -92,17 +92,18 @@ no-raw-length-values
 no-raw-color-functions
 no-unknown-css-vars
 prefer-semantic-tokens
+no-deprecated-tokens
 ```
 
 - ✅ raw px / rem / em / etc.
 - ✅ raw `rgb()`, `rgba()`, `hsl()`, color literals
 - ✅ unknown CSS custom-property references
 - ✅ "prefer semantic over primitive" warning when a primitive token (`--color-blue-500`) is used in app code
+- ✅ deprecated-token flagging with replacement suggestions
 - ❌ category enforcement (e.g., spacing token used as color)
 - ❌ allowed-tokens-per-component-variant
-- ❌ deprecated-token flagging with replacement suggestions
 
-**Status:** core "no raw values, prefer semantic" coverage is in. Per-component allowlists and deprecation chains are not.
+**Status:** core "no raw values, prefer semantic, no deprecated aliases" coverage is in. Per-component allowlists and category enforcement are not.
 
 ---
 
@@ -196,18 +197,18 @@ design://prompt/{name}           template
 
 ---
 
-## 10. MCP Prompts — 🟡 partial
+## 10. MCP Prompts — ✅ implemented
 
-`src/server/registrations.ts` `registerPrompts()` registers every prompt loaded from the source repo's `prompts/*.prompt.md`. The fixture has one (`build_with_design_system`).
+`src/server/registrations.ts` `registerPrompts()` registers every prompt loaded from the source repo's `prompts/*.prompt.md`. The fixture ships a starter set:
 
 - ✅ wiring is done (any prompt added by UX shows up in `prompts/list` automatically)
-- 🟡 the named prompts the spec called out exist as concepts but only `build_with_design_system` ships in the fixture
-- ❌ `review_ui_against_design_system` not in fixture
-- ❌ `repair_design_violations` not in fixture
-- ❌ `choose_component` not in fixture
-- ❌ `migrate_to_design_system` not in fixture
+- ✅ `build_with_design_system`
+- ✅ `review_ui_against_design_system`
+- ✅ `repair_design_violations`
+- ✅ `choose_component`
+- ✅ `migrate_to_design_system`
 
-**Status:** infrastructure is complete; the prompt content itself is the source repo's responsibility, not this server's. We can ship more starter prompts in `tests/fixtures/design-systems/sample/prompts/` as templates.
+**Status:** infrastructure is complete and the fixture demonstrates the expected starter prompt set. Real production prompt wording remains source-repo owned.
 
 ---
 
@@ -330,16 +331,17 @@ The schema supports `status: "stable" | "experimental" | "deprecated"` on compon
 - ✅ deprecated components flagged
 - ✅ deprecated **props** — `ComponentPropSchema` carries `deprecated` / `replacedBy`
 - ✅ `validate_composition` warns on deprecated prop usage and suggests replacements
-- ❌ deprecated **tokens** — no `deprecated` field on token entities
-- 🟡 replacement IDs exist for props, not components/tokens
+- ✅ deprecated **tokens** — token entities preserve `$deprecated` / `$replacement`
+- ✅ `validate_ui` blocks deprecated token CSS vars and suggests replacements
+- 🟡 replacement IDs exist for props/tokens, not component-level chains
 - ❌ migration examples (no schema for them)
 - ❌ hard errors for forbidden legacy usage (no rule enforces "do not import deprecated components")
 
-**Status:** component and prop deprecation are modeled enough for composition planning. Token/component replacement chains and migration examples remain open.
+**Status:** component, prop, and token deprecation are modeled enough for validation. Component-level replacement chains and migration examples remain open.
 
 ---
 
-## 18. CI / PR Validation Mode — 🟡 partial
+## 18. CI / PR Validation Mode — ✅ implemented
 
 There is now a CLI path for invoking `validate_ui` outside MCP:
 
@@ -393,25 +395,25 @@ There is now a CLI path for invoking `validate_ui` outside MCP:
 
 ---
 
-## 21. AST-Based Validation — ❌ missing for rules
+## 21. AST-Based Validation — ✅ implemented
 
-Built-in `accessibility.ts`, `copy.ts`, `tokens.ts` use **regex-based heuristics** even on TSX (e.g., `accessibility.ts` regex-matches `<input ... />` patterns, not real JSX AST).
+The codebase now has a first source-repo AST detector for runtime validation rules.
 
-The `RuleDetector` union type (`src/bundle/types.ts`) is currently:
+The `RuleDetector` union type (`src/bundle/types.ts`) is now:
 
 ```ts
-export type RuleDetector = RegexDetector;
+export type RuleDetector = RegexDetector | JsxPropValueDetector;
 ```
 
-The earlier plan called for `regex | ast | plugin` detectors; only `regex` exists.
+`JsxPropValueDetector` supports literal JSX prop allow/disallow checks, e.g. banning `<Button variant="ghost">` without brittle regex matching.
 
 - ✅ AST is used for component metadata extraction (`src/bundle/component-api.ts`, `src/bundle/storybook.ts`)
-- ❌ AST is NOT used for validation rules
-- ❌ no JSX-prop-value rule kind
+- ✅ AST is used for source-repo validation rules through `src/validation/ast.ts`
+- ✅ JSX-prop-value rule kind
 - ❌ no className/token-usage AST rule
 - ❌ no plugin escape hatch
 
-**Status:** regex-only for rule execution. AST exists in build-time parsing but not in runtime validation.
+**Status:** implemented for JSX prop literal validation. Deeper className/token AST rules and plugin escape hatches remain future depth.
 
 ---
 
@@ -423,8 +425,9 @@ The `inspect_coverage` tool answers part of this:
 - ✅ which schema types are declared but empty
 - ✅ which entities reference missing relation targets
 - ❌ which tokens are unused (no token-usage scan)
-- ❌ which patterns lack validation contracts (no check on missing `data.contract`)
-- ❌ which entities are orphaned across the relation graph
+- ✅ which patterns lack validation contracts (`pattern-contract-missing`)
+- ✅ orphan components (`component-orphan`)
+- 🟡 broader relation-graph orphan reporting remains shallow
 - ❌ which schemas are incomplete in deeper senses (e.g., a component declares a prop that no example uses)
 
 **Status:** the existing tool is the closest analogue to a coverage report; deeper graph checks are not.
@@ -481,50 +484,50 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 | 2 | Storybook parser | ✅ examples + args + controls + play notes + states |
 | 3 | MDX documentation parser | 🟡 partial (search-clean body; no structured do/don't / tables) |
 | 4 | Accessibility rule engine | ✅ 7 rules (ARIA roles included; no dialog focus / contrast) |
-| 5 | Semantic token validator | ✅ 4 rules (no category enforcement, no per-component allowlists) |
+| 5 | Semantic token validator | ✅ 5 rules (deprecated tokens included; no category enforcement / per-component allowlists) |
 | 6 | Composition validator v2 | 🟡 partial (structural; no ordering / state / platform) |
 | 7 | Pattern contract schema | ✅ structural shape (no interaction / copy / a11y fields) |
 | 8 | Design brief / harness contract | ✅ `nextSteps` plus `design://workflow`; enforcement is harness-side |
 | 9 | MCP resources | ✅ all entity types + per-type templates + `design://workflow` |
-| 10 | MCP prompts | 🟡 wiring complete; only one starter prompt in fixture |
+| 10 | MCP prompts | ✅ wiring complete + starter prompt set |
 | 11 | Similarity / alternatives | ✅ explicit alternatives + provenance |
 | 12 | Deterministic decision explanations | ✅ `explain_decision` tool |
 | 13 | Violation repair suggestions | 🟡 structured payload exists for selected rules; no before/after snippets |
 | 14 | Copy / voice validator | ✅ 4 rules (no glossary / reading-level / per-surface tone) |
 | 15 | Design decision trace | ✅ validation + recommendation provenance |
 | 16 | Component dependency / import guidance | ✅ schema'd; surfaced via `get_usage` |
-| 17 | Deprecation and migration | 🟡 component + prop deprecation; no token/component replacement chains |
+| 17 | Deprecation and migration | 🟡 component + prop + token deprecation; no component replacement chains |
 | 18 | CI / PR validation mode | ✅ JSON/SARIF validate_ui + composition batch CLI |
 | 19 | Bundle quality checks | 🟡 structural + metadata + orphan/contract coverage; no example compile / stale replacement |
 | 20 | Framework adapters | 🟡 language flag covers tsx/jsx/ts/js/css/html/vue (no React Native; no per-framework AST) |
-| 21 | AST-based validation rules | ❌ regex-only `RuleDetector`; AST is build-time only |
-| 22 | Design-system coverage report | 🟡 component-side + orphan coverage via `inspect_coverage`; token-usage still shallow |
+| 21 | AST-based validation rules | ✅ JSX prop value detector; className/token AST rules remain future depth |
+| 22 | Design-system coverage report | 🟡 component-side + orphan + missing-contract coverage; token-usage still shallow |
 | 23 | Strict schema specs | 🟡 strong for component / pattern / rule; weak for token / migration / platform |
 | 24 | Harness-enforced modes | 🟡 `design://workflow` published; hard blocking remains client-side |
 
-**Tally:** 13 ✅ · 10 🟡 · 1 ❌ (out of 24).
+**Tally:** 15 ✅ · 9 🟡 · 0 ❌ (out of 24).
 
-The remaining major-gap set clusters into two real gaps:
+The remaining major-gap set has no fully missing server-side item. The hard parts left are depth expansions:
 
-- **AST-based rules** (21) — `RuleDetector` union extension to `RegexDetector | AstDetector | PluginDetector`, then per-language adapters. Real engineering work.
 - **Harness hard enforcement** (24) — server-side workflow resource exists; the blocking loop belongs in the client/CI harness.
+- **Deeper AST adapters** (21 follow-up depth) — className/token usage and plugin escape hatch are still future work.
 
-The 13 partials are mostly "the surface exists but the depth doesn't" — rules can be added (each is ~20-40 LOC), schema fields can be extended.
+The remaining partials are mostly "the surface exists but the depth doesn't" — rules can be added (each is ~20-40 LOC), schema fields can be extended.
 
 For each item that's worth promoting from 🟡 to ✅, the cheapest path is:
 
 | Promote | Approach |
 |---|---|
 | #4 Accessibility → dialog / contrast | Add dialog focus/escape and token-based contrast rules to `accessibility.ts` |
-| #5 Tokens → category enforcement | Add a 5th rule keyed off the token's `$type` field |
+| #5 Tokens → category enforcement | Add a rule keyed off the token's `$type` field |
 | #7 Pattern contract → +copy + interaction | Extend `PatternContractSchema` with `copyRules: string[]`, `interactionRules: string[]` |
 | #13 Repair → structured | Extend `replaceWith` coverage and add before/after snippets where fixes are deterministic |
-| #17 Deprecation → tokens + component replacement | Add replacement fields to component/token schemas and migration examples |
+| #17 Deprecation → component replacement | Add replacement fields to component schemas and migration examples |
 | #22 Coverage → token-usage | Add unused-token and deprecated-token target checks in `inspect-coverage.ts` |
 
 If you want any of these landed, the cheapest 5 in priority order would be:
 
-1. **#18 CI / PR validation mode** — JSON/SARIF CLI is in; next value is optional composition-plan validation.
+1. **#3 MDX structured extraction** — promote do/don't, prop tables, accessibility notes, and migration sections into `Entity.data`.
 2. **#13 Structured repair suggestions** — extend `replaceWith` beyond autofocus and add before/after snippets.
 3. **#21 AST detector kind** — biggest engineering investment of the bunch but unblocks deeper validation of token-usage-in-JSX, controlled-vs-uncontrolled, etc.
 

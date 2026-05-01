@@ -195,6 +195,10 @@ describe("Phase 2 — HTTP transport", () => {
       const list = await client.listPrompts();
       const names = list.prompts.map((p) => p.name);
       expect(names).toContain("build_with_design_system");
+      expect(names).toContain("review_ui_against_design_system");
+      expect(names).toContain("repair_design_violations");
+      expect(names).toContain("choose_component");
+      expect(names).toContain("migrate_to_design_system");
 
       const got = await client.getPrompt({
         name: "build_with_design_system",

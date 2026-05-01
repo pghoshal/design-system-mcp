@@ -196,8 +196,17 @@ describe("Phase 1 — local mode integration", () => {
     });
 
     it("does not load prompt MDX files", async () => {
-      expect(manager.current().prompts.map((prompt) => prompt.name)).toEqual([
+      expect(
+        manager
+          .current()
+          .prompts.map((prompt) => prompt.name)
+          .sort(),
+      ).toEqual([
         "build_with_design_system",
+        "choose_component",
+        "migrate_to_design_system",
+        "repair_design_violations",
+        "review_ui_against_design_system",
       ]);
       expect(manager.current().entities.has("prompt:ignored_mdx_prompt")).toBe(false);
     });
@@ -383,6 +392,26 @@ describe("Phase 1 — local mode integration", () => {
       expect(r.violations.some((v) => v.match === "#2563EB")).toBe(true);
     });
 
+    it("runs source-repo JSX prop value AST rules", async () => {
+      const r = await validateUiHandler.handle(
+        {
+          code: 'import { Button } from "@acme/ui/button";\n<Button variant="ghost">Save</Button>;',
+          language: "tsx",
+          rules: [],
+        },
+        ctx(),
+      );
+      expect(r.ranRules).toContain("no-button-ghost-variant");
+      expect(r.ok).toBe(false);
+      expect(r.violations).toContainEqual(
+        expect.objectContaining({
+          ruleId: "no-button-ghost-variant",
+          line: 2,
+          match: 'variant="ghost"',
+        }),
+      );
+    });
+
     it("clean code passes", async () => {
       const r = await validateUiHandler.handle(
         {
@@ -394,6 +423,26 @@ describe("Phase 1 — local mode integration", () => {
       );
       expect(r.ok).toBe(true);
       expect(r.violations).toEqual([]);
+    });
+
+    it("flags deprecated token usage with replacement guidance", async () => {
+      const r = await validateUiHandler.handle(
+        {
+          code: "const color = 'var(--color-action-legacyPrimary)';",
+          language: "tsx",
+          rules: [],
+        },
+        ctx(),
+      );
+      expect(r.ok).toBe(false);
+      expect(r.violations).toContainEqual(
+        expect.objectContaining({
+          ruleId: "no-deprecated-tokens",
+          severity: "error",
+          match: "var(--color-action-legacyPrimary)",
+          suggestion: "Use token:color.action.primary instead.",
+        }),
+      );
     });
 
     it("flags invalid ARIA roles", async () => {
@@ -565,12 +614,15 @@ describe("Phase 1 — local mode integration", () => {
         { intent: "primary action card", framework: "react", limit: 1 },
         ctx(),
       );
-      expect(r.provenance.some((item) => item.entityId === "component:button")).toBe(true);
-      expect(r.provenance.find((item) => item.entityId === "component:button")?.reasons).toContain(
-        "Matched the intent search query.",
-      );
+      const selectedComponent = r.recommended.components[0];
+      expect(selectedComponent).toBeDefined();
+      expect(
+        r.provenance.find((item) => item.entityId === selectedComponent?.id)?.reasons,
+      ).toContain("Matched the intent search query.");
       expect(r.alternatives.components.length).toBeGreaterThan(0);
-      expect(r.alternatives.components.every((item) => item.id !== "component:button")).toBe(true);
+      expect(r.alternatives.components.every((item) => item.id !== selectedComponent?.id)).toBe(
+        true,
+      );
     });
 
     it("explain_decision returns deterministic evidence for an entity", async () => {

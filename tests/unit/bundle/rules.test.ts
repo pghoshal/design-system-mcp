@@ -47,6 +47,25 @@ describe("loadRules", () => {
     expect(result[0]?.detector.type).toBe("regex");
   });
 
+  it("loads a valid JSX prop value AST rule", async () => {
+    await writeRule("no-ghost-button.json", {
+      id: "no-ghost-button",
+      description: "no ghost buttons",
+      severity: "error",
+      appliesTo: ["tsx"],
+      detector: {
+        type: "jsx-prop-value",
+        component: "Button",
+        prop: "variant",
+        disallow: ["ghost"],
+        message: "Button variant '{value}' is not allowed",
+      },
+    });
+    const result = await loadRules(tmpDir, logger);
+    expect(result).toHaveLength(1);
+    expect(result[0]?.detector.type).toBe("jsx-prop-value");
+  });
+
   it("loads multiple rules", async () => {
     await writeRule("a.json", {
       id: "rule-a",

@@ -163,6 +163,7 @@ describe("Phase 4 — stdio transport", () => {
   it("prompts/list and prompts/get work over stdio", async () => {
     const list = await conn.client.listPrompts();
     expect(list.prompts.map((p) => p.name)).toContain("build_with_design_system");
+    expect(list.prompts.map((p) => p.name)).toContain("repair_design_violations");
 
     const got = await conn.client.getPrompt({
       name: "build_with_design_system",

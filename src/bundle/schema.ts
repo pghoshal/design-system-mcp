@@ -224,6 +224,25 @@ export const RegexDetectorSchema = z.object({
   message: z.string().min(1),
 });
 
+export const JsxPropValueDetectorSchema = z
+  .object({
+    type: z.literal("jsx-prop-value"),
+    component: z.string().min(1).max(128).optional(),
+    prop: z.string().min(1).max(128),
+    allow: z
+      .array(z.union([z.string(), z.number(), z.boolean()]))
+      .min(1)
+      .optional(),
+    disallow: z
+      .array(z.union([z.string(), z.number(), z.boolean()]))
+      .min(1)
+      .optional(),
+    message: z.string().min(1),
+  })
+  .refine((value) => value.allow !== undefined || value.disallow !== undefined, {
+    message: "jsx-prop-value requires allow or disallow",
+  });
+
 export const RuleSchema = z.object({
   id: z
     .string()
@@ -233,7 +252,7 @@ export const RuleSchema = z.object({
   description: z.string().min(1),
   severity: z.enum(["error", "warning", "info"]).default("warning"),
   appliesTo: z.array(RuleLanguageSchema).min(1),
-  detector: z.discriminatedUnion("type", [RegexDetectorSchema]),
+  detector: z.union([RegexDetectorSchema, JsxPropValueDetectorSchema]),
 });
 
 export type RuleFile = z.infer<typeof RuleSchema>;

@@ -1,0 +1,13 @@
+{
+  "id": "no-button-ghost-variant",
+  "description": "Button variant must be one of the design-system variants.",
+  "severity": "error",
+  "appliesTo": ["tsx", "jsx"],
+  "detector": {
+    "type": "jsx-prop-value",
+    "component": "Button",
+    "prop": "variant",
+    "disallow": ["ghost"],
+    "message": "Button variant '{value}' is not in the design system."
+  }
+}

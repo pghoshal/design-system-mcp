@@ -5,6 +5,7 @@ export const SEMANTIC_TOKEN_RULE_IDS = [
   "no-raw-color-functions",
   "no-unknown-css-vars",
   "prefer-semantic-tokens",
+  "no-deprecated-tokens",
 ] as const;
 
 export type SemanticTokenRuleId = (typeof SEMANTIC_TOKEN_RULE_IDS)[number];
@@ -46,7 +47,8 @@ export function runSemanticTokenValidation(
   }
   if (
     availableRules.includes("no-unknown-css-vars") ||
-    availableRules.includes("prefer-semantic-tokens")
+    availableRules.includes("prefer-semantic-tokens") ||
+    availableRules.includes("no-deprecated-tokens")
   ) {
     violations.push(...findCssVarProblems(code, tokenIndex, availableRules));
   }
@@ -198,7 +200,26 @@ function cssVarViolation(
       },
     };
   }
+  if (token && activeRules.includes("no-deprecated-tokens") && isDeprecated(token.entity)) {
+    const replacement = token.entity.data.replacement;
+    return {
+      ruleId: "no-deprecated-tokens",
+      severity: "error",
+      message: `${cssVar} is deprecated.`,
+      match: usage.match,
+      ...(typeof replacement === "string" ? { suggestion: `Use ${replacement} instead.` } : {}),
+      provenance: {
+        ruleSource: "built-in",
+        sourceEntity: token.entity.id,
+        sourceEntityPath: token.entity.source.path,
+      },
+    };
+  }
   return null;
+}
+
+function isDeprecated(entity: Entity): boolean {
+  return entity.data.deprecated === true || entity.data.deprecated === "true";
 }
 
 function isTokenLikeCssVar(cssVar: string, tokenStems: ReadonlySet<string>): boolean {

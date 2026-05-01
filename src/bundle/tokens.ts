@@ -56,6 +56,8 @@ export async function loadTokens(repoPath: string, logger: Logger): Promise<Toke
       const tokenType = (tok.$type ?? tok.type) as string | undefined;
       const description = (tok.$description ?? tok.comment ?? "") as string;
       const rawValue = tok.$value ?? tok.value;
+      const deprecated = tok.$deprecated ?? tok.deprecated;
+      const replacement = tok.$replacement ?? tok.replacement;
       const summary =
         description ||
         `${tokenType ? `${tokenType} ` : ""}token ${tok.path.join(".")} = ${stringifyValue(rawValue)}`;
@@ -71,6 +73,8 @@ export async function loadTokens(repoPath: string, logger: Logger): Promise<Toke
           value: rawValue,
           original: tok.original?.$value ?? tok.original?.value,
           $type: tokenType,
+          ...(deprecated !== undefined ? { deprecated } : {}),
+          ...(replacement !== undefined ? { replacement } : {}),
         },
         source: {
           path:

@@ -170,7 +170,16 @@ export interface RegexDetector {
   message: string;
 }
 
-export type RuleDetector = RegexDetector;
+export interface JsxPropValueDetector {
+  type: "jsx-prop-value";
+  component?: string | undefined;
+  prop: string;
+  allow?: Array<string | number | boolean> | undefined;
+  disallow?: Array<string | number | boolean> | undefined;
+  message: string;
+}
+
+export type RuleDetector = RegexDetector | JsxPropValueDetector;
 
 export interface Rule {
   id: string;

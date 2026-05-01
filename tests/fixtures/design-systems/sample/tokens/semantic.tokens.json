@@ -11,6 +11,13 @@
         "$value": "{color.red.500}",
         "$type": "color",
         "$description": "Destructive action color"
+      },
+      "legacyPrimary": {
+        "$value": "{color.action.primary}",
+        "$type": "color",
+        "$description": "Deprecated primary action alias",
+        "$deprecated": true,
+        "$replacement": "token:color.action.primary"
       }
     },
     "surface": {

@@ -4,6 +4,7 @@ import type { Violation } from "../bundle/types.js";
 import type { ToolHandler } from "../server/types.js";
 import { ToolError } from "../util/errors.js";
 import { ACCESSIBILITY_RULE_IDS, runAccessibilityValidation } from "../validation/accessibility.js";
+import { runAstDetector } from "../validation/ast.js";
 import { COPY_RULE_IDS, runCopyValidation } from "../validation/copy.js";
 import { runRegexDetector } from "../validation/regex.js";
 import { SEMANTIC_TOKEN_RULE_IDS, runSemanticTokenValidation } from "../validation/tokens.js";
@@ -76,6 +77,8 @@ export const handler: ToolHandler<typeof ValidateUiInput, typeof ValidateUiOutpu
     for (const rule of applicable) {
       if (rule.detector.type === "regex") {
         violations.push(...runRegexDetector(rule, args.code));
+      } else if (rule.detector.type === "jsx-prop-value") {
+        violations.push(...(await runAstDetector(rule, args.code, args.language)));
       }
     }
     const semantic = runSemanticTokenValidation(bundle, args.code, args.language, requested);
