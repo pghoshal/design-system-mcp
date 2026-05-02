@@ -33,8 +33,9 @@ Thumbs.db
 *.swo
 
 # Local agent settings
-.claude/settings.local.json
-.claude/Progress.md
+.claude/
+CLAUDE.md
+AGENTS.md
 
 # Runtime cache checkouts
 .cache/
