@@ -470,21 +470,22 @@ What is intentionally not separate-schema'd:
 
 ---
 
-## 24. Harness-Enforced Modes — 🟡 partial (server-published, client-enforced)
+## 24. Harness-Enforced Modes — ✅ implemented (server-published, CLI-enforced)
 
-The server publishes a machine-readable workflow contract at `design://workflow`, but it has no mode flag, state machine, or "agent must validate before final output" enforcement.
+The server publishes a machine-readable workflow contract at `design://workflow` with mode definitions, state-machine transitions, final-gate requirements, and CI commands. The CLI enforces the hard final gate through `--mode final_check`.
 
-The `recommend_composition` `nextSteps` output is **advisory** — the agent can ignore it. Nothing in this server forces:
+- ✅ `plan_only` mode is represented in `design://workflow`
+- ✅ `generate` mode is represented in `design://workflow`
+- ✅ `validate` mode is represented in `design://workflow`
+- ✅ `repair` mode is represented in `design://workflow`
+- ✅ `final_check` mode is represented in `design://workflow`
+- ✅ final gate is CI-enforceable via `pnpm validate -- --mode final_check --composition composition.json <file...>`
+- ✅ `final_check` fails when `validate_composition` evidence is missing
+- ✅ `final_check` fails when `validate_ui` / `validate_composition` returns error-severity violations
 
-- ❌ `plan_only` mode
-- ❌ `generate` mode
-- ❌ `validate` mode
-- ❌ `repair` mode
-- ❌ `final_check` gate that blocks output until all error-severity violations are resolved
+Important boundary: an arbitrary MCP client can still ignore a resource contract. The robust enforcement point is the harness or CI runner invoking the CLI gate.
 
-This is a harness-side feature (the client / IDE / agent loop), not really a server-side feature. The MCP server now publishes the workflow resource (#8), but it cannot enforce that an agent runs it.
-
-**Status:** server-side contract is implemented; blocking enforcement needs a client-side or harness-side layer.
+**Status:** server-side contract and CI/harness blocking gate are implemented. IDE-native hard blocking remains client integration work, but the MCP server now publishes the contract and the repo ships an enforceable final gate.
 
 ---
 
@@ -515,13 +516,12 @@ This is a harness-side feature (the client / IDE / agent loop), not really a ser
 | 21 | AST-based validation rules | ✅ JSX prop value detector; className/token AST rules remain future depth |
 | 22 | Design-system coverage report | ✅ component + relation + contract + replacement + token usage coverage |
 | 23 | Strict schema specs | ✅ component + pattern + rule + token + migration + platform mapping |
-| 24 | Harness-enforced modes | 🟡 `design://workflow` published; hard blocking remains client-side |
+| 24 | Harness-enforced modes | ✅ `design://workflow` modes + state machine + CLI final_check gate |
 
-**Tally:** 23 ✅ · 1 🟡 · 0 ❌ (out of 24).
+**Tally:** 24 ✅ · 0 🟡 · 0 ❌ (out of 24).
 
-The remaining major-gap set has no fully missing server-side item. The hard parts left are depth expansions:
+The original 24 advanced-feature gaps are now closed at the server/CLI-contract level. Remaining work is future depth, not missing baseline functionality:
 
-- **Harness hard enforcement** (24) — server-side workflow resource exists; the blocking loop belongs in the client/CI harness.
 - **Deeper AST adapters** (21 follow-up depth) — className/token usage and plugin escape hatch are still future work.
 
 The remaining partials are mostly "the surface exists but the depth doesn't" — rules can be added (each is ~20-40 LOC), schema fields can be extended.
@@ -534,9 +534,9 @@ For each item that's worth promoting from 🟡 to ✅, the cheapest path is:
 | #5 Tokens → category enforcement | Add a rule keyed off the token's `$type` field |
 | #7 Pattern contract → +copy + interaction | Extend `PatternContractSchema` with `copyRules: string[]`, `interactionRules: string[]` |
 
-If you want any of these landed, the cheapest 5 in priority order would be:
+Potential future depth in priority order:
 
 1. **#5 Semantic token category enforcement** — detect color tokens in spacing/layout slots and spacing tokens in color slots.
-2. **#24 Harness-enforced modes** — publish a stricter workflow/mode contract and wire CI-side enforcement.
+2. **#21 Deeper AST adapters** — add className/token usage and optional safe plugin detector kinds.
 
 Each is a discrete slice that fits a TDD-RED→GREEN→Critic cycle.

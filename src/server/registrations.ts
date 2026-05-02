@@ -8,6 +8,40 @@ const WORKFLOW_CONTRACT = {
   mode: "design-system-first",
   purpose:
     "Deterministic UX-to-dev handoff contract for agents and harnesses using this design-system MCP server.",
+  modes: [
+    {
+      name: "plan_only",
+      requiredEvidence: ["validate_composition"],
+      exitCriteria: "Composition plan has no error-severity violations before code generation.",
+    },
+    {
+      name: "generate",
+      requiredEvidence: ["validate_composition"],
+      exitCriteria: "Code generation is based on a validated component/pattern plan.",
+    },
+    {
+      name: "validate",
+      requiredEvidence: ["validate_composition", "validate_ui"],
+      exitCriteria: "Generated code and composition plan have been validated.",
+    },
+    {
+      name: "repair",
+      requiredEvidence: ["validate_composition", "validate_ui"],
+      exitCriteria: "All error-severity violations have deterministic repairs or are resolved.",
+    },
+    {
+      name: "final_check",
+      requiredEvidence: ["validate_composition", "validate_ui"],
+      exitCriteria: "No error-severity violations and no missing harness evidence remain.",
+    },
+  ],
+  stateMachine: [
+    { from: "plan_only", to: "generate" },
+    { from: "generate", to: "validate" },
+    { from: "validate", to: "repair" },
+    { from: "repair", to: "validate" },
+    { from: "validate", to: "final_check" },
+  ],
   requiredSequence: [
     "describe_schema",
     "search_design_system",
@@ -18,11 +52,14 @@ const WORKFLOW_CONTRACT = {
     "explain_decision",
   ],
   finalGate: {
+    mode: "final_check",
     requiredTools: ["validate_composition", "validate_ui"],
+    cli: "pnpm validate -- --source <design-system-repo> --mode final_check --composition composition.json <file...>",
     requiredOutcome: "No error-severity violations may remain before generated UI is accepted.",
   },
   harnessPolicy: {
     enforceableByServer: false,
+    enforceableByCli: true,
     serverGuarantee:
       "The server publishes this contract and deterministic evidence; MCP clients or CI harnesses must enforce blocking behavior.",
   },

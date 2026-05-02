@@ -709,9 +709,10 @@ Validate changed UI files against a local design-system source repo in CI:
 pnpm validate -- --source ./path/to/design-system src/App.tsx
 pnpm validate -- --source ./path/to/design-system --format sarif src/App.tsx > ds-results.sarif
 pnpm validate -- --source ./path/to/design-system --composition composition.json
+pnpm validate -- --source ./path/to/design-system --mode final_check --composition composition.json src/App.tsx
 ```
 
-The command prints JSON or SARIF and exits `1` if any error-severity `validate_ui` or `validate_composition` violation is found.
+The command prints JSON or SARIF and exits `1` if any error-severity `validate_ui` / `validate_composition` violation is found. In `--mode final_check`, it also exits `1` when required harness evidence is missing, such as running UI validation without a composition plan.
 
 This project follows test-first development for non-trivial changes. Read [.claude/tdd.md](./.claude/tdd.md) and [.claude/critic.md](./.claude/critic.md) before making behavioral changes.
 

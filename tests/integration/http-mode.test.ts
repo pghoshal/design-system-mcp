@@ -256,12 +256,23 @@ describe("Phase 2 — HTTP transport", () => {
           : "";
       const workflowJson = JSON.parse(workflowText) as {
         mode: string;
+        modes: Array<{ name: string; requiredEvidence: string[] }>;
+        stateMachine: Array<{ from: string; to: string }>;
         requiredSequence: string[];
-        finalGate: { requiredTools: string[] };
+        finalGate: { mode: string; requiredTools: string[]; cli: string };
       };
       expect(workflowJson.mode).toBe("design-system-first");
+      expect(workflowJson.modes).toContainEqual(
+        expect.objectContaining({
+          name: "final_check",
+          requiredEvidence: ["validate_composition", "validate_ui"],
+        }),
+      );
+      expect(workflowJson.stateMachine).toContainEqual({ from: "validate", to: "final_check" });
       expect(workflowJson.requiredSequence).toContain("recommend_composition");
+      expect(workflowJson.finalGate.mode).toBe("final_check");
       expect(workflowJson.finalGate.requiredTools).toContain("validate_ui");
+      expect(workflowJson.finalGate.cli).toContain("--mode final_check");
 
       const entity = await client.readResource({ uri: "design://entity/principle:clarity" });
       const body = entity.contents[0];

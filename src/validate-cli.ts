@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import pino from "pino";
+import { z } from "zod";
 import { RuleLanguageSchema } from "./bundle/schema.js";
 import type { RuleLanguage } from "./bundle/types.js";
 import { LocalSourceAdapter } from "./source/local.js";
@@ -12,6 +13,9 @@ import {
 import { handler as validateUiHandler } from "./tools/validate-ui.js";
 import { LayeredCache } from "./util/lru.js";
 
+const HarnessModeSchema = z.enum(["plan_only", "generate", "validate", "repair", "final_check"]);
+type HarnessMode = z.infer<typeof HarnessModeSchema>;
+
 interface CliOptions {
   sourcePath: string;
   files: string[];
@@ -19,6 +23,7 @@ interface CliOptions {
   language?: RuleLanguage | undefined;
   rules: string[];
   format: "json" | "sarif";
+  mode?: HarnessMode | undefined;
 }
 
 interface FileResult {
@@ -130,17 +135,22 @@ async function main(argv: string[]): Promise<number> {
         0,
       );
 
+    const harness = parsed.mode
+      ? harnessGate(parsed.mode, { files: results.length, compositions: compositions.length })
+      : undefined;
+    const missingEvidenceCount = harness?.missingEvidence.length ?? 0;
     const payload = {
-      ok: errorCount === 0,
+      ok: errorCount === 0 && missingEvidenceCount === 0,
       counts: { error: errorCount, warning: warningCount, info: infoCount },
       files: results,
       compositions,
+      ...(harness !== undefined ? { harness } : {}),
     };
 
     process.stdout.write(
       `${JSON.stringify(parsed.format === "sarif" ? toSarif(results, compositions) : payload, null, 2)}\n`,
     );
-    return errorCount === 0 ? 0 : 1;
+    return errorCount === 0 && missingEvidenceCount === 0 ? 0 : 1;
   } finally {
     await source.stop();
   }
@@ -153,6 +163,7 @@ function parseArgs(argv: string[]): CliOptions | { error: string } {
   let language: RuleLanguage | undefined;
   let rules: string[] = [];
   let format: "json" | "sarif" = "json";
+  let mode: HarnessMode | undefined;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -174,6 +185,15 @@ function parseArgs(argv: string[]): CliOptions | { error: string } {
       const raw = readValue(argv, ++i, "--format");
       if (raw !== "json" && raw !== "sarif") return { error: "supported formats: json, sarif" };
       format = raw;
+    } else if (arg === "--mode") {
+      const raw = readValue(argv, ++i, "--mode");
+      const result = HarnessModeSchema.safeParse(raw);
+      if (!result.success) {
+        return {
+          error: "supported modes: plan_only, generate, validate, repair, final_check",
+        };
+      }
+      mode = result.data;
     } else if (arg === "--composition") {
       compositions.push(readValue(argv, ++i, "--composition"));
     } else if (arg === "--help" || arg === "-h") {
@@ -190,7 +210,15 @@ function parseArgs(argv: string[]): CliOptions | { error: string } {
     return { error: "missing file path(s) or --composition plan(s) to validate" };
   }
 
-  return { sourcePath: path.resolve(sourcePath), files, compositions, language, rules, format };
+  return {
+    sourcePath: path.resolve(sourcePath),
+    files,
+    compositions,
+    language,
+    rules,
+    format,
+    mode,
+  };
 }
 
 function readValue(argv: string[], index: number, flag: string): string {
@@ -226,10 +254,24 @@ function inferLanguage(filePath: string): RuleLanguage {
 
 function usage(): string {
   return [
-    "Usage: ds-mcp-validate --source <design-system-repo> [--language tsx] [--rules a,b] [--format json|sarif] [--composition plan.json] <file...>",
+    "Usage: ds-mcp-validate --source <design-system-repo> [--language tsx] [--rules a,b] [--format json|sarif] [--mode validate|final_check] [--composition plan.json] <file...>",
     "",
-    "Outputs JSON or SARIF. Exits 1 when any error-severity code or composition violation is found.",
+    "Outputs JSON or SARIF. Exits 1 when any error-severity code/composition violation or harness-gate failure is found.",
   ].join("\n");
+}
+
+function harnessGate(
+  mode: HarnessMode,
+  counts: { files: number; compositions: number },
+): { mode: HarnessMode; missingEvidence: string[] } {
+  const missingEvidence: string[] = [];
+  if (["validate", "repair", "final_check"].includes(mode) && counts.files === 0) {
+    missingEvidence.push("validate_ui");
+  }
+  if (["plan_only", "generate", "validate", "repair", "final_check"].includes(mode)) {
+    if (counts.compositions === 0) missingEvidence.push("validate_composition");
+  }
+  return { mode, missingEvidence };
 }
 
 function toSarif(

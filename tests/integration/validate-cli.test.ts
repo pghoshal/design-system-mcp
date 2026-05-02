@@ -152,4 +152,72 @@ describe("validate CLI", () => {
       stdout: expect.stringContaining('"path": "props.children"'),
     });
   });
+
+  it("final_check mode blocks output without composition evidence", async () => {
+    const file = path.join(tmpDir, "clean.tsx");
+    await fs.writeFile(file, "const color = 'var(--color-action-primary)';\n", "utf8");
+
+    await expect(
+      execFileAsync(TSX_BIN, [
+        ENTRY,
+        "--source",
+        FIXTURE,
+        "--mode",
+        "final_check",
+        "--format",
+        "json",
+        file,
+      ]),
+    ).rejects.toMatchObject({
+      code: 1,
+      stdout: expect.stringContaining('"missingEvidence": ['),
+    });
+  });
+
+  it("final_check mode passes with clean code and composition evidence", async () => {
+    const file = path.join(tmpDir, "clean.tsx");
+    const plan = path.join(tmpDir, "composition.json");
+    await fs.writeFile(file, "const color = 'var(--color-action-primary)';\n", "utf8");
+    await fs.writeFile(
+      plan,
+      JSON.stringify({
+        pattern: "pattern:confirmation-dialog",
+        platform: "web",
+        framework: "react",
+        components: [
+          { id: "component:card", props: { title: "Delete project?", tone: "danger" } },
+          {
+            id: "component:button",
+            parent: "component:card",
+            props: { variant: "danger", children: "Delete project" },
+          },
+        ],
+        tokens: ["token:color.action.danger", "token:color.surface.default"],
+      }),
+      "utf8",
+    );
+
+    const { stdout } = await execFileAsync(TSX_BIN, [
+      ENTRY,
+      "--source",
+      FIXTURE,
+      "--mode",
+      "final_check",
+      "--format",
+      "json",
+      "--composition",
+      plan,
+      file,
+    ]);
+
+    const parsed = JSON.parse(stdout) as {
+      ok: boolean;
+      harness: { mode: string; missingEvidence: string[] };
+    };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.harness).toEqual({
+      mode: "final_check",
+      missingEvidence: [],
+    });
+  });
 });
