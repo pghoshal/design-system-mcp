@@ -15,6 +15,33 @@ It indexes a design-system Git repository containing tokens, principles, pattern
 
 AI coding agents often generate UI without knowing your design system. They hard-code colors, invent spacing, miss patterns, and write off-voice copy. This server gives those agents a first-class, current, machine-readable source of truth.
 
+## Real Output Examples
+
+These are generated trial pages from real token and handoff sources, not marketing mockups.
+
+| Example | Source compatibility proven |
+| --- | --- |
+| `examples/bmw-m-real-page` | Community Markdown / `getdesign.md`-style design-system handoff |
+| `examples/material-3-token-page` | Material-style `tokens.json` export |
+| `examples/dtcg-token-alias-page` | DTCG whole-token alias `.@` references |
+| `examples/token-set-context-page` | Token Studio token sets with slash-containing names and context-local aliases |
+
+**Community Markdown / getdesign handoff trial**
+
+![BMW M community Markdown sample](docs/bmw-m-sample.jpg)
+
+**Token Studio contextual token-set trial**
+
+![Token Studio contextual token-set sample](docs/sample-vs-token.png)
+
+**Material 3 token export trial**
+
+![Material 3 token sample](docs/material-3-sample.png)
+
+**DTCG whole-token alias trial**
+
+![DTCG whole-token alias sample](docs/dtcg-alias-sample.jpg)
+
 ## Current Status
 
 Implemented:
@@ -255,29 +282,6 @@ Tokens Studio exports are also supported when saved under `tokens/*.tokens.json`
 CSS platform output encodes non-alphanumeric token-path characters into valid, collision-resistant custom-property names. A token path like `light/color.color.action.primary.disabled` is returned as `var(--light_u002f_color-color-action-primary-disabled)`, and `validate_ui` checks that same encoded name. This keeps slash-containing token sets compatible with generated CSS while preserving the original token entity id.
 
 DTCG whole-token aliases that include a trailing `.@` marker are normalized when the target token exists. For example, `{composite.border.thin.@}` is passed to Style Dictionary as `{composite.border.thin}`. Missing targets are not guessed; they remain Style Dictionary reference errors.
-
-Real-token trial examples live under `examples/`:
-
-- `examples/bmw-m-real-page` — community Markdown / `getdesign.md`-style design-system handoff
-- `examples/material-3-token-page` — Material-style `tokens.json`
-- `examples/dtcg-token-alias-page` — DTCG whole-token alias `.@`
-- `examples/token-set-context-page` — Token Studio token sets with slash-containing names and context-local aliases
-
-**Community Markdown / getdesign handoff trial**
-
-![BMW M community Markdown sample](docs/bmw-m-sample.jpg)
-
-**Token Studio contextual token-set trial**
-
-![Token Studio contextual token-set sample](docs/sample-vs-token.png)
-
-**Material 3 token export trial**
-
-![Material 3 token sample](docs/material-3-sample.png)
-
-**DTCG whole-token alias trial**
-
-![DTCG whole-token alias sample](docs/dtcg-alias-sample.jpg)
 
 ### Token Source Compatibility
 
