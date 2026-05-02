@@ -524,9 +524,9 @@ The original 24 advanced-feature gaps are now closed at the server/CLI-contract 
 
 - **Deeper AST adapters** (21 follow-up depth) — className/token usage and plugin escape hatch are still future work.
 
-The remaining partials are mostly "the surface exists but the depth doesn't" — rules can be added (each is ~20-40 LOC), schema fields can be extended.
+The remaining opportunities are depth expansions, not yellow audit gaps. Rules can be added incrementally (each is ~20-40 LOC), and schema fields can be extended as teams formalize more design-system knowledge.
 
-For each item that's worth promoting from 🟡 to ✅, the cheapest path is:
+Suggested future depth:
 
 | Promote | Approach |
 |---|---|
