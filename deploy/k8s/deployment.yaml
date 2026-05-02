@@ -9,7 +9,7 @@
 #   - replicas: 1
 #   - strategy: Recreate (no rolling update; brief outage during deploy is
 #     acceptable, the alternative is multi-replica which the codebase does
-#     not support — see `.claude/hallucinate.md` §1)
+#     not support)
 #   - PodDisruptionBudget set to maxUnavailable: 1 so the cluster doesn't
 #     refuse to drain a node holding the only pod
 

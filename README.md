@@ -4,7 +4,7 @@
 
 A single-instance [Model Context Protocol](https://modelcontextprotocol.io/) server that gives AI coding agents authoritative design-system context before they generate UI.
 
-It indexes a design-system Git repository containing tokens, principles, patterns, voice/tone guidance, prompt templates, and validation rules. MCP clients such as Claude Code, Cursor, Claude Desktop, and internal agents can then ask questions like:
+It indexes a design-system Git repository containing tokens, principles, patterns, voice/tone guidance, prompt templates, and validation rules. MCP-compatible IDEs, editors, and internal agents can then ask questions like:
 
 - Which design tokens should I use for this button?
 - What confirmation-dialog pattern exists?

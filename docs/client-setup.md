@@ -1,6 +1,6 @@
 # Client setup
 
-How to point an MCP client (Claude Code, Cursor, Claude Desktop, custom agent) at this server.
+How to point an MCP-compatible IDE or custom agent at this server.
 
 The server has two transport modes:
 
@@ -39,9 +39,9 @@ The required environment is:
 | `DS_MCP_SOURCE_MODE` | `local` |
 | `DS_MCP_SOURCE_PATH` | absolute path to the design-system checkout |
 
-### Claude Code
+### Generic stdio MCP client
 
-Add to your Claude Code MCP server config file:
+Add to your MCP client config file:
 
 ```json
 {
@@ -60,7 +60,7 @@ Add to your Claude Code MCP server config file:
 }
 ```
 
-Restart Claude Code. The next session should expose the design-system tools.
+Restart the client. The next session should expose the design-system tools.
 
 ### Cursor
 
@@ -82,27 +82,7 @@ Cursor reads MCP config from `~/.cursor/mcp.json`:
 }
 ```
 
-### Claude Desktop
-
-`~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or the Windows equivalent:
-
-```json
-{
-  "mcpServers": {
-    "design-system": {
-      "command": "node",
-      "args": ["/abs/path/to/ds-mcp-server/dist/index.js"],
-      "env": {
-        "DS_MCP_MODE": "stdio",
-        "DS_MCP_SOURCE_MODE": "local",
-        "DS_MCP_SOURCE_PATH": "/Users/you/work/design-system"
-      }
-    }
-  }
-}
-```
-
-### Custom agent (Anthropic SDK example)
+### Custom agent SDK example
 
 ```ts
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -145,7 +125,7 @@ For SSH URLs (`git@github.com:org/repo.git`), the server uses your existing ssh-
 
 For HTTPS URLs of private repos, set `GIT_AUTH_TOKEN` to a fine-scoped PAT with `repo` read access. The token is embedded as basic-auth into the URL only at clone/fetch time and never logged (verify by running with `LOG_LEVEL=debug` and grepping the output).
 
-### Claude Code (Git mode)
+### Generic stdio MCP client (Git mode)
 
 ```json
 {
@@ -173,8 +153,8 @@ Use this when a small team shares one running instance.
 
 The hosted server is started by the operator (see `docs/runbook.md`); IDEs only need its URL and an API key.
 
-> **Note on IDE config schemas.** The JSON shapes shown below for Claude Code,
-> Cursor, and Claude Desktop reflect the most common configuration patterns at
+> **Note on IDE config schemas.** The JSON shapes shown below for common MCP clients
+> reflect common configuration patterns at
 > the time of writing, but each IDE owns its own MCP-config schema and may
 > evolve it. Verify against the IDE's own MCP docs if a config is rejected,
 > and fall back to the SDK example (`Custom agent (HTTP mode)` below) — that
@@ -197,7 +177,7 @@ printf '%s' 'ds-mcp-team-key-1' | shasum -a 256
 
 Put `0adc...e1` into `DS_MCP_API_KEYS`. Hand `ds-mcp-team-key-1` (the unhashed key) to clients.
 
-### Claude Code (HTTP mode)
+### Generic HTTP MCP client
 
 ```json
 {

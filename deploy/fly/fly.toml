@@ -3,8 +3,7 @@
 # This is a SAMPLE manifest — replace placeholder values before `fly launch`:
 #   - `app` name (must be globally unique on Fly)
 #   - `primary_region` (pick a region close to your users)
-#   - `image` tag (use an immutable tag, never `:latest` in production —
-#     see `.claude/deployment.md` §1.4)
+#   - `image` tag (use an immutable tag, never `:latest` in production)
 #
 # Single-instance is intentional. Do NOT raise `min_machines_running` or
 # add replicas — the codebase is not designed for multi-instance.

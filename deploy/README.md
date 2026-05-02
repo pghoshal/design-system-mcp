@@ -10,14 +10,13 @@ These are **starter templates**, not production manifests. Copy and adapt.
 
 ## Single-instance is intentional
 
-This server is designed for one running process per environment. Do not raise replica counts. See `.claude/hallucinate.md` §1 and `.claude/context.md` "Anti-Goals" for the rationale; multi-instance is a fresh design proposal, not a config change.
+This server is designed for one running process per environment. Do not raise replica counts; multi-instance is a fresh design proposal, not a config change.
 
 ## Image tagging
 
-Always pin to an immutable tag (git SHA short or semver). Never `:latest` in production. The CI pipeline at `.github/workflows/ci.yml` builds and pushes tagged images on git tag (see `.claude/deployment.md` §5.2).
+Always pin to an immutable tag (git SHA short or semver). Never `:latest` in production. The CI pipeline at `.github/workflows/ci.yml` builds and pushes tagged images on git tag.
 
 ## What lives where
 
-- Architecture facts: `.claude/deployment.md`
 - Operating procedures: `docs/runbook.md`
 - Client (IDE) configuration: `docs/client-setup.md`

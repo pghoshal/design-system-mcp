@@ -8,7 +8,7 @@
 
 ## 0. Context
 
-The UX team maintains a design system in Figma + a Git repo of `tokens.json` + markdown. Engineers use Claude Code / Cursor / Claude Desktop to generate UI. Today the agent does not know the design system, so it generates code that violates tokens, principles, components, and voice.
+The UX team maintains a design system in Figma plus a Git repo of `tokens.json` and Markdown. Engineers use MCP-compatible IDEs and custom agents to generate UI. Today the agent does not know the design system, so it generates code that violates tokens, principles, components, and voice.
 
 Goal: a small **single-instance MCP server** that any agentic client can connect to, that returns authoritative design system context at request time, with the lowest possible operational complexity.
 
@@ -20,7 +20,7 @@ Decisions locked in this revision:
 - Two transports: **stdio** (local IDE) and **Streamable HTTP** (hosted single instance).
 - Generic-verb tools, schema-in-data manifest. (Unchanged from v1 plan.)
 
-This document is the master architecture plan. Detailed governance lives in `.claude/`.
+This document is the master architecture plan.
 
 ---
 
@@ -62,9 +62,8 @@ This document is the master architecture plan. Detailed governance lives in `.cl
         └─────────────────────┬──────────────────────────────┘
                               │
                               ▼
-                       Clients (Claude Code,
-                       Cursor, Claude Desktop,
-                       custom agents)
+                       MCP-compatible IDEs
+                       and custom agents
 ```
 
 **Invariants:**
@@ -202,8 +201,6 @@ validate_composition(components, pattern?, tokens?) → CompositionValidation
 design-system-mcp/
 ├── PLAN.md                             ← this file
 ├── README.md
-├── CLAUDE.md
-├── AGENTS.md
 ├── package.json
 ├── tsconfig.json
 ├── tsconfig.build.json
@@ -214,19 +211,6 @@ design-system-mcp/
 ├── .env.example
 ├── .gitignore
 ├── .dockerignore
-│
-├── .claude/                            # governance docs
-│   ├── context.md
-│   ├── hallucinate.md
-│   ├── allow-deny.md
-│   ├── project.md
-│   ├── blueprint.md
-│   ├── hld.md
-│   ├── lld.md
-│   ├── flows.md
-│   ├── db.md
-│   ├── deployment.md
-│   └── Progress.md
 │
 ├── .github/
 │   └── workflows/
@@ -297,7 +281,7 @@ design-system-mcp/
 │           └── sample/                 # tiny test design system
 │
 └── docs/
-    ├── client-setup.md                 # connect Claude Code/Cursor/Desktop
+    ├── client-setup.md                 # connect MCP-compatible IDEs and custom agents
     └── runbook.md
 ```
 
