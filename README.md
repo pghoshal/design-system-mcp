@@ -25,14 +25,20 @@ Implemented:
 - Streamable HTTP transport for hosted use
 - In-memory bundle and MiniSearch index
 - Style Dictionary token loading
+- Community Markdown / `getdesign.md` token loading for Markdown-only or hybrid handoff repos
+- Token Studio export compatibility, including contextual token-set references
+- DTCG whole-token alias compatibility for trailing `.@` references
 - Markdown and MDX content loading
 - Prompt template loading
 - JSON regex validation rules
+- AST-backed JSX prop-value validation rules
 - Component metadata ingestion from `components/*/component.json`
 - TypeScript component API parser for `*Props` interfaces and type literals
 - Storybook CSF story parser for canonical examples, variants, controls, and play-function interaction notes
 - Canonical usage examples, constraints, and prop metadata
 - Composition recommendation and composition/prop validation
+- Deterministic decision explanations, recommendation provenance, violation provenance, and repair payloads where a single safe edit is known
+- Built-in semantic token, accessibility, copy/voice, deprecated token, and deprecated component checks
 - Optional HTTP API-key auth
 - Health, readiness, version, and admin refresh endpoints
 - MCP prompts registered from the loaded source repo (`prompts/*.prompt.md`)
@@ -69,6 +75,8 @@ Design-system Git repo
   components/
     Button/
       component.json
+      Button.tsx
+      Button.stories.tsx
   prompts/*.prompt.md
   rules/*.json
   manifest.json
@@ -132,6 +140,11 @@ design-system/
     conventions/
       forms.mdx
     voice-and-tone.md
+  components/
+    Button/
+      component.json
+      Button.tsx
+      Button.stories.tsx
   prompts/
     build_with_design_system.prompt.md
   rules/
@@ -245,9 +258,23 @@ DTCG whole-token aliases that include a trailing `.@` marker are normalized when
 
 Real-token trial examples live under `examples/`:
 
+- `examples/bmw-m-real-page` — community Markdown / `getdesign.md`-style design-system handoff
 - `examples/material-3-token-page` — Material-style `tokens.json`
 - `examples/dtcg-token-alias-page` — DTCG whole-token alias `.@`
 - `examples/token-set-context-page` — Token Studio token sets with slash-containing names and context-local aliases
+
+### Token Source Compatibility
+
+| Source style | Supported | Notes |
+| --- | --- | --- |
+| DTCG JSON in `tokens/*.tokens.json` | yes | Resolved through Style Dictionary |
+| Token Studio JSON exports | yes | Supports token-set order, contextual references, and slash-containing token-set names |
+| DTCG whole-token aliases with `.@` | yes | Normalized only when the target token exists |
+| Markdown frontmatter `tokens:` | yes | Full DTCG-shaped token trees |
+| Markdown community sections | yes | `colors`, `spacing`, `rounded`, `radius`, `radii`, `typography`, and `components` |
+| Markdown prose token tables | searchable only | Good for guidance, not deterministic token resolution |
+
+Token-only sources can enforce deterministic token use and catch raw values, unknown CSS variables, deprecated tokens, accessibility issues, and copy issues. Full enterprise handoff still needs component metadata, pattern contracts, voice rules, and conventions beside the tokens.
 
 ### Markdown Docs
 
@@ -620,6 +647,22 @@ The server exposes generic verbs:
 | `inspect_coverage` | Report content coverage gaps before deterministic generation |
 | `explain_decision` | Explain a chosen entity with deterministic source, relation, and constraint evidence |
 
+## Design-System-First Handoff Flow
+
+For best UX-to-dev consistency, agents and CI should follow this sequence:
+
+1. Read `design://workflow` or call `describe_schema`.
+2. Call `inspect_coverage` to understand whether the source is enterprise-complete or token-only/community-grade.
+3. Call `recommend_composition` with the UI intent.
+4. Call `explain_decision` for selected components, patterns, or tokens when the harness needs auditable reasoning.
+5. Call `get_usage` for selected components and `resolve_token` for every concrete token value.
+6. Call `validate_composition` before generating code.
+7. Generate code.
+8. Call `validate_ui` and apply deterministic `repair` / `replaceWith` edits first.
+9. In CI or final harness mode, run `pnpm validate -- --mode final_check --composition composition.json <file...>`.
+
+The server publishes the workflow contract at `design://workflow`; hard blocking is enforced by the validation CLI and by any client harness that honors that resource.
+
 Example `validate_ui` request:
 
 ```json
@@ -665,17 +708,6 @@ When a violation has one deterministic edit, the response includes `replaceWith`
 ```
 
 Rules that require product judgment still return human-readable `suggestion` text without an auto-fix.
-
-Recommended harness flow for stronger design consistency:
-
-1. Call `describe_schema`.
-2. Call `recommend_composition` with the UI intent.
-3. Call `get_usage` for selected components.
-4. Call `resolve_token` for concrete values.
-5. Call `validate_composition` on the planned component/prop structure.
-6. Generate code.
-7. Call `validate_ui` on the generated code.
-8. Repair all error violations before presenting the result.
 
 Example response:
 
