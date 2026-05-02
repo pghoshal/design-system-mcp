@@ -26,8 +26,9 @@ export interface TokenLoadResult {
 export async function loadTokens(repoPath: string, logger: Logger): Promise<TokenLoadResult> {
   const tokensDir = path.join(repoPath, "tokens");
   const files = (await dirExists(tokensDir)) ? await findTokenFiles(tokensDir) : [];
+  const jsonTokenSources = await prepareJsonTokenSources(files, repoPath, logger);
   const markdownTokenSources = await extractMarkdownTokenSources(repoPath, logger);
-  const sourceFiles = [...sortByRelativePath(files, repoPath), ...markdownTokenSources.files];
+  const sourceFiles = [...jsonTokenSources.files, ...markdownTokenSources.files];
 
   if (files.length === 0) {
     logger.debug({ tokensDir }, "no token json files found");
@@ -81,6 +82,7 @@ export async function loadTokens(repoPath: string, logger: Logger): Promise<Toke
         data,
         source: {
           path:
+            jsonTokenSources.sourcePathByFile.get(tok.filePath) ??
             markdownTokenSources.sourcePathByFile.get(tok.filePath) ??
             relativeToRepo(tok.filePath, repoPath),
         },
@@ -93,8 +95,14 @@ export async function loadTokens(repoPath: string, logger: Logger): Promise<Toke
     );
     return { tokensResolved: dict.tokens as Record<string, unknown>, entities };
   } finally {
-    await markdownTokenSources.cleanup();
+    await Promise.all([jsonTokenSources.cleanup(), markdownTokenSources.cleanup()]);
   }
+}
+
+interface JsonTokenSources {
+  files: string[];
+  sourcePathByFile: Map<string, string>;
+  cleanup: () => Promise<void>;
 }
 
 interface MarkdownTokenSources {
@@ -115,6 +123,62 @@ const COMMUNITY_TOKEN_SECTIONS: Readonly<Record<string, string>> = {
   components: "component",
   component: "component",
 };
+
+async function prepareJsonTokenSources(
+  files: string[],
+  repoPath: string,
+  logger: Logger,
+): Promise<JsonTokenSources> {
+  const sorted = sortByRelativePath(files, repoPath);
+  const parsedFiles: Array<{ file: string; rel: string; parsed: unknown }> = [];
+
+  for (const file of sorted) {
+    const raw = await fs.readFile(file, "utf8");
+    parsedFiles.push({
+      file,
+      rel: path.relative(repoPath, file),
+      parsed: parseJson(raw),
+    });
+  }
+
+  const tokenSetOwners = tokenSetOwnersFor(parsedFiles.map((entry) => entry.parsed));
+  const out: string[] = [];
+  const sourcePathByFile = new Map<string, string>();
+  let tmpDir: string | undefined;
+  let normalizedCount = 0;
+
+  for (const { file, rel, parsed } of parsedFiles) {
+    if (parsed === undefined) {
+      out.push(file);
+      continue;
+    }
+
+    const normalized = normalizeTokenStudioReferences(parsed, tokenSetOwners);
+    if (!normalized.changed) {
+      out.push(file);
+      continue;
+    }
+
+    tmpDir ??= await fs.mkdtemp(path.join(os.tmpdir(), "ds-mcp-json-tokens-"));
+    const outFile = path.join(tmpDir, `${safeFileName(rel)}.tokens.json`);
+    await fs.writeFile(outFile, JSON.stringify(normalized.value), "utf8");
+    out.push(outFile);
+    sourcePathByFile.set(outFile, rel);
+    normalizedCount += 1;
+  }
+
+  if (normalizedCount > 0) {
+    logger.info({ count: normalizedCount }, "normalized token studio references");
+  }
+
+  return {
+    files: out,
+    sourcePathByFile,
+    cleanup: async () => {
+      if (tmpDir) await fs.rm(tmpDir, { recursive: true, force: true });
+    },
+  };
+}
 
 async function extractMarkdownTokenSources(
   repoPath: string,
@@ -265,6 +329,98 @@ function normalizeCommunityTokenLeaves(value: unknown, tokenType: string): unkno
 
 function isDtcgToken(value: unknown): value is Record<string, unknown> {
   return isRecord(value) && ("$value" in value || "value" in value);
+}
+
+function parseJson(raw: string): unknown | undefined {
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return undefined;
+  }
+}
+
+interface TokenSetOwner {
+  set: string;
+  root: unknown;
+}
+
+function tokenSetOwnersFor(values: unknown[]): TokenSetOwner[] {
+  const owners: TokenSetOwner[] = [];
+
+  for (const value of values) {
+    if (!isRecord(value) || !isRecord(value.$metadata)) continue;
+    for (const set of tokenSetSearchOrder(value)) {
+      owners.push({ set, root: value[set] });
+    }
+  }
+
+  return owners;
+}
+
+function normalizeTokenStudioReferences(
+  value: unknown,
+  tokenSetOwners: TokenSetOwner[],
+): { value: unknown; changed: boolean } {
+  if (!isRecord(value) || !isRecord(value.$metadata)) return { value, changed: false };
+
+  if (tokenSetOwners.length === 0) return { value, changed: false };
+
+  let changed = false;
+  const rewritten = rewriteReferences(value, (ref) => {
+    if (hasPath(value, ref.split("."))) return ref;
+
+    const matches = new Set(
+      tokenSetOwners
+        .filter((owner) => hasPath(owner.root, ref.split(".")))
+        .map((owner) => owner.set),
+    );
+    if (matches.size !== 1) return ref;
+
+    changed = true;
+    return `${[...matches][0]}.${ref}`;
+  });
+
+  return { value: rewritten, changed };
+}
+
+function tokenSetSearchOrder(root: Record<string, unknown>): string[] {
+  const existing = Object.keys(root).filter((key) => !key.startsWith("$") && isRecord(root[key]));
+  const order =
+    isRecord(root.$metadata) && Array.isArray(root.$metadata.tokenSetOrder)
+      ? root.$metadata.tokenSetOrder.filter((key): key is string => typeof key === "string")
+      : [];
+  return [
+    ...order.filter((key) => existing.includes(key)),
+    ...existing.filter((key) => !order.includes(key)),
+  ];
+}
+
+function rewriteReferences(value: unknown, rewrite: (ref: string) => string): unknown {
+  if (Array.isArray(value)) return value.map((item) => rewriteReferences(item, rewrite));
+  if (typeof value === "string") return rewriteReferenceString(value, rewrite);
+  if (!isRecord(value)) return value;
+
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    out[key] = rewriteReferences(child, rewrite);
+  }
+  return out;
+}
+
+function rewriteReferenceString(value: string, rewrite: (ref: string) => string): string {
+  return value.replace(/\{([^}]+)\}/g, (match, ref: string) => {
+    const next = rewrite(ref.trim());
+    return next === ref.trim() ? match : `{${next}}`;
+  });
+}
+
+function hasPath(value: unknown, parts: string[]): boolean {
+  let current: unknown = value;
+  for (const part of parts) {
+    if (!isRecord(current) || !(part in current)) return false;
+    current = current[part];
+  }
+  return isDtcgToken(current);
 }
 
 function safeFileName(value: string): string {

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Material 3 Token Workspace</title>
+    <link rel="stylesheet" href="./tokens.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="rail" aria-label="Workspace navigation">
+        <a class="rail-logo" href="#">M3</a>
+        <a class="rail-button active" href="#overview" aria-label="Overview">O</a>
+        <a class="rail-button" href="#planning" aria-label="Planning">P</a>
+        <a class="rail-button" href="#signals" aria-label="Signals">S</a>
+      </aside>
+
+      <main class="content">
+        <header class="topbar">
+          <label class="search">
+            <span aria-hidden="true">/</span>
+            <input type="search" placeholder="Search plans, rooms, and briefs" aria-label="Search plans, rooms, and briefs" />
+          </label>
+          <div class="avatar" aria-label="Signed in as Priya">PG</div>
+        </header>
+
+        <section class="hero" id="overview">
+          <div class="hero-copy">
+            <span class="eyebrow">Material 3 planning hub</span>
+            <h1>Calm surfaces for focused team decisions.</h1>
+            <p>
+              A one-page frontend built from a Tokens Studio Material 3 export, using resolved
+              color roles and typography tokens through the MCP server.
+            </p>
+            <div class="actions">
+              <a class="button" href="#planning">Review today</a>
+              <a class="button secondary" href="#signals">View signals</a>
+            </div>
+          </div>
+
+          <aside class="side-panel" aria-label="May planning calendar">
+            <div>
+              <img class="workspace-photo" src="https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=1600&q=80" alt="Team workspace with people reviewing plans" />
+              <span class="eyebrow">May sprint</span>
+              <h2>Design sync cadence</h2>
+              <div class="calendar" aria-label="Calendar preview">
+                <span class="day">1</span><span class="day">2</span><span class="day active">3</span><span class="day">4</span><span class="day">5</span><span class="day">6</span><span class="day">7</span>
+                <span class="day">8</span><span class="day">9</span><span class="day">10</span><span class="day active">11</span><span class="day">12</span><span class="day">13</span><span class="day">14</span>
+              </div>
+            </div>
+            <p>Primary actions, containers, surface variants, and readable type are all token-backed.</p>
+          </aside>
+        </section>
+
+        <section class="section" id="planning">
+          <div class="section-header">
+            <h2>Today's workspace</h2>
+            <a class="button secondary" href="#overview">Open board</a>
+          </div>
+          <div class="grid">
+            <article class="card large">
+              <span class="eyebrow">Room readiness</span>
+              <h3>Executive review room has a clean agenda and final artifacts.</h3>
+              <p>Photography carries the context; Material surfaces keep the product interface quiet.</p>
+            </article>
+
+            <article class="metric">
+              <strong>87%</strong>
+              <span class="metric-label">Components mapped to the release plan</span>
+              <div class="chips">
+                <span class="chip">Primary</span>
+                <span class="chip">Surface</span>
+              </div>
+            </article>
+
+            <div class="feature-list">
+              <article class="feature">
+                <span class="feature-icon" aria-hidden="true">R</span>
+                <div>
+                  <h3>Token roles resolved</h3>
+                  <p>Semantic Material 3 colors are used instead of raw page decisions.</p>
+                </div>
+              </article>
+              <article class="feature">
+                <span class="feature-icon" aria-hidden="true">UP</span>
+                <div>
+                  <h3>Typography aligned</h3>
+                  <p>Roboto type scale values come from the imported token source.</p>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="signals">
+          <div class="section-header">
+            <h2>Consistency signals</h2>
+          </div>
+          <div class="grid">
+            <article class="card">
+              <span class="eyebrow">Passed</span>
+              <h3>Color and type resolution</h3>
+              <p>The MCP resolves Material role tokens and composite typography references from the Tokens Studio file.</p>
+            </article>
+            <article class="card">
+              <span class="eyebrow">Gap</span>
+              <h3>Layout tokens missing</h3>
+              <p>The source does not define spacing, radius, or elevation tokens, so those choices remain local CSS.</p>
+            </article>
+            <article class="card">
+              <span class="eyebrow">Next</span>
+              <h3>Structured components</h3>
+              <p>Enterprise composition checks need component and pattern metadata in addition to tokens.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

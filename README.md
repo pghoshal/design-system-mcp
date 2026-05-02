@@ -237,6 +237,8 @@ components:
 
 For Markdown-only repositories that intentionally provide tokens plus prose but not full enterprise component/pattern metadata, call `inspect_coverage` with `profile: "community"`. The default `enterprise` profile still treats missing required entity types as errors.
 
+Tokens Studio exports are also supported when saved under `tokens/*.tokens.json`. If a file contains token-set metadata and unqualified references such as `{color.primary.40}`, the loader rewrites those references to the single token set that owns the target, for example `{global.color.primary.40}`, before Style Dictionary resolves them. The server does not replace Style Dictionary resolution; this is a compatibility shim for common Tokens Studio exports.
+
 ### Markdown Docs
 
 Docs use YAML frontmatter plus Markdown or MDX body:

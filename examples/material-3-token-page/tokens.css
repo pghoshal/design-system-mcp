@@ -1,0 +1,36 @@
+:root {
+  --material-3-color-theme-light-primary: #6750a4;
+  --material-3-color-theme-light-on-primary: #ffffff;
+  --material-3-color-theme-light-primary-container: #eaddff;
+  --material-3-color-theme-light-on-primary-container: #21005d;
+  --material-3-color-theme-light-secondary: #625b71;
+  --material-3-color-theme-light-on-secondary: #ffffff;
+  --material-3-color-theme-light-secondary-container: #e8def8;
+  --material-3-color-theme-light-on-secondary-container: #1d192b;
+  --material-3-color-theme-light-tertiary: #7d5260;
+  --material-3-color-theme-light-tertiary-container: #ffd8e4;
+  --material-3-color-theme-light-on-tertiary-container: #31111d;
+  --material-3-color-theme-light-error: #b3261e;
+  --material-3-color-theme-light-background: #fffbfe;
+  --material-3-color-theme-light-on-background: #1c1b1f;
+  --material-3-color-theme-light-surface: #fffbfe;
+  --material-3-color-theme-light-on-surface: #1c1b1f;
+  --material-3-color-theme-light-surface-variant: #e7e0ec;
+  --material-3-color-theme-light-on-surface-variant: #49454f;
+  --material-3-color-theme-light-outline: #79747e;
+  --material-3-color-surface-light-1: #f6f0f9;
+  --material-3-color-surface-light-2: #f0e8f6;
+  --material-3-color-surface-light-3: #eae2f2;
+  --material-3-color-surface-light-5: #e5dbee;
+  --material-3-text-font-family: Roboto, Arial, sans-serif;
+  --material-3-text-display-medium-size: 45px;
+  --material-3-text-display-medium-line-height: 52px;
+  --material-3-text-headline-small-size: 24px;
+  --material-3-text-headline-small-line-height: 32px;
+  --material-3-text-title-large-size: 22px;
+  --material-3-text-title-large-line-height: 28px;
+  --material-3-text-body-medium-size: 14px;
+  --material-3-text-body-medium-line-height: 20px;
+  --material-3-text-label-large-size: 14px;
+  --material-3-text-label-large-line-height: 20px;
+}
