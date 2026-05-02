@@ -1,6 +1,6 @@
 # DTCG Alias Token Trial
 
-This static page was generated from `/Users/prasenjit-etpl/Downloads/tokens (1).json`.
+This static page was generated from a local `tokens (1).json` file.
 
 - `tokens.css` mirrors the resolved token values used by the page.
 - `styles.css` consumes those values through CSS custom properties.

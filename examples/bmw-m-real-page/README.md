@@ -1,6 +1,6 @@
 # BMW M Real-World MCP Page Trial
 
-This static page was generated from `/Users/prasenjit-etpl/Downloads/DESIGN-bmw-m.md` during a real Markdown-only design-system compatibility test.
+This static page was generated from a local `DESIGN-bmw-m.md` file during a real Markdown-only design-system compatibility test.
 
 - `tokens.css` mirrors the resolved BMW M token values.
 - `styles.css` consumes those tokens through CSS custom properties.
@@ -16,7 +16,7 @@ The page was checked through the MCP validation path:
 
 ```bash
 SRC=$(mktemp -d /tmp/bmw-m-ds-XXXXXX)
-cp /Users/prasenjit-etpl/Downloads/DESIGN-bmw-m.md "$SRC/DESIGN.md"
+cp /path/to/DESIGN-bmw-m.md "$SRC/DESIGN.md"
 pnpm validate -- --source "$SRC" --language html --format json examples/bmw-m-real-page/index.html
 ```
 

@@ -1,6 +1,6 @@
 # Token Set Context Trial
 
-This static page was generated from `/Users/prasenjit-etpl/Downloads/tokens (2).json`.
+This static page was generated from a local `tokens (2).json` file.
 
 The source file uses Token Studio token sets such as `light/color`, `dark/color`, `breakpoints/desktop`, `breakpoints/tablet`, and `breakpoints/mobile`. Those names are valid token-source paths, but `/` cannot be emitted directly inside CSS custom property names. The MCP now formats them with a shared sanitizer:
 

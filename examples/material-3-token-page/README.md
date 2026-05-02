@@ -1,6 +1,6 @@
 # Material 3 Tokens Studio Trial
 
-This static page was generated from `/Users/prasenjit-etpl/Downloads/tokens.json`, a Tokens Studio-style Material 3 export.
+This static page was generated from a local `tokens.json` file, a Tokens Studio-style Material 3 export.
 
 - `tokens.css` mirrors the resolved Material 3 token values used by the page.
 - `styles.css` consumes those values through CSS custom properties.
