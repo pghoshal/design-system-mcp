@@ -239,6 +239,8 @@ For Markdown-only repositories that intentionally provide tokens plus prose but 
 
 Tokens Studio exports are also supported when saved under `tokens/*.tokens.json`. If a file contains token-set metadata and unqualified references such as `{color.primary.40}`, the loader rewrites those references to the single token set that owns the target, for example `{global.color.primary.40}`, before Style Dictionary resolves them. The server does not replace Style Dictionary resolution; this is a compatibility shim for common Tokens Studio exports.
 
+DTCG whole-token aliases that include a trailing `.@` marker are normalized when the target token exists. For example, `{composite.border.thin.@}` is passed to Style Dictionary as `{composite.border.thin}`. Missing targets are not guessed; they remain Style Dictionary reference errors.
+
 ### Markdown Docs
 
 Docs use YAML frontmatter plus Markdown or MDX body:

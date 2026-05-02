@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DTCG Alias Token Operations Page</title>
+    <link rel="stylesheet" href="./tokens.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="#">
+          <span class="brand-mark" aria-hidden="true">DS</span>
+          Alias Token Ops
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a href="#overview">Overview</a>
+          <a href="#metrics">Metrics</a>
+          <a href="#handoff">Handoff</a>
+        </nav>
+      </header>
+
+      <section class="hero" id="overview">
+        <div class="hero-copy">
+          <span class="eyebrow">DTCG alias compatibility</span>
+          <h1>Composite tokens resolved into a usable interface.</h1>
+          <p>
+            This page uses the real token file's brand color, text roles, spacing aliases, border
+            aliases, typography composite, shadow composite, and gradient token.
+          </p>
+          <div class="actions">
+            <a class="button" href="#metrics">Review metrics</a>
+            <a class="button secondary" href="#handoff">View handoff</a>
+          </div>
+        </div>
+        <aside class="hero-panel" aria-label="Team planning photo">
+          <span class="eyebrow">Resolved through MCP</span>
+          <h2>39 token entities loaded</h2>
+          <p>Trailing whole-token aliases such as composite border, shadow, gradient, and typography now resolve before validation.</p>
+        </aside>
+      </section>
+
+      <section class="grid" id="metrics">
+        <article class="metric">
+          <span class="label">Design token coverage</span>
+          <strong>39</strong>
+          <p>Every token leaf from the source file is available to MCP tools.</p>
+        </article>
+        <article class="card">
+          <span class="label">Brand role</span>
+          <h3>Primary action blue</h3>
+          <p>Interactive elements use the resolved primary brand token instead of local color decisions.</p>
+          <div class="gradient-strip" aria-hidden="true"></div>
+        </article>
+        <article class="alert">
+          <span class="status">Needs richer metadata</span>
+          <h3>Components and patterns absent</h3>
+          <p>Token validation works; enterprise composition checks still need structured handoff data.</p>
+        </article>
+      </section>
+
+      <section class="table-panel" id="handoff">
+        <h2>Handoff signal</h2>
+        <div class="table-row">
+          <span>Color aliases</span>
+          <span class="status">Resolved</span>
+          <span>color.text.secondary</span>
+        </div>
+        <div class="table-row">
+          <span>Whole-token aliases</span>
+          <span class="status">Resolved</span>
+          <span>composite.*.@</span>
+        </div>
+        <div class="table-row">
+          <span>Spacing and borders</span>
+          <span class="status">Available</span>
+          <span>spacing.base + border.base</span>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

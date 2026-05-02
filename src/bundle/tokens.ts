@@ -142,6 +142,9 @@ async function prepareJsonTokenSources(
   }
 
   const tokenSetOwners = tokenSetOwnersFor(parsedFiles.map((entry) => entry.parsed));
+  const jsonTokenRoots = parsedFiles
+    .map((entry) => entry.parsed)
+    .filter((value): value is Record<string, unknown> => isRecord(value));
   const out: string[] = [];
   const sourcePathByFile = new Map<string, string>();
   let tmpDir: string | undefined;
@@ -153,8 +156,10 @@ async function prepareJsonTokenSources(
       continue;
     }
 
-    const normalized = normalizeTokenStudioReferences(parsed, tokenSetOwners);
-    if (!normalized.changed) {
+    const dtcgAliases = normalizeDtcgWholeTokenAliases(parsed, jsonTokenRoots);
+    const normalized = normalizeTokenStudioReferences(dtcgAliases.value, tokenSetOwners);
+    const changed = dtcgAliases.changed || normalized.changed;
+    if (!changed) {
       out.push(file);
       continue;
     }
@@ -168,7 +173,7 @@ async function prepareJsonTokenSources(
   }
 
   if (normalizedCount > 0) {
-    logger.info({ count: normalizedCount }, "normalized token studio references");
+    logger.info({ count: normalizedCount }, "normalized token source references");
   }
 
   return {
@@ -378,6 +383,26 @@ function normalizeTokenStudioReferences(
 
     changed = true;
     return `${[...matches][0]}.${ref}`;
+  });
+
+  return { value: rewritten, changed };
+}
+
+function normalizeDtcgWholeTokenAliases(
+  value: unknown,
+  roots: Record<string, unknown>[],
+): { value: unknown; changed: boolean } {
+  if (!isRecord(value)) return { value, changed: false };
+
+  let changed = false;
+  const rewritten = rewriteReferences(value, (ref) => {
+    if (!ref.endsWith(".@")) return ref;
+
+    const next = ref.slice(0, -2);
+    if (!roots.some((root) => hasPath(root, next.split(".")))) return ref;
+
+    changed = true;
+    return next;
   });
 
   return { value: rewritten, changed };
