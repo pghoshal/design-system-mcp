@@ -797,4 +797,77 @@ describe("inspect_coverage", () => {
       ),
     );
   });
+
+  it("supports a community profile for token-plus-markdown design systems", async () => {
+    const bundle = {
+      version: "test",
+      schema: {
+        types: {
+          token: { searchable: ["summary"] },
+          component: { searchable: ["summary"] },
+          pattern: { searchable: ["summary"] },
+          principle: { searchable: ["summary"] },
+          voice: { searchable: ["summary"] },
+          convention: { searchable: ["summary"] },
+        },
+      },
+      entities: new Map([
+        [
+          "token:colors.canvas",
+          {
+            id: "token:colors.canvas",
+            type: "token",
+            summary: "Canvas",
+            tags: [],
+            data: { path: ["colors", "canvas"], value: "#000000" },
+            source: { path: "DESIGN.md" },
+          },
+        ],
+        [
+          "convention:DESIGN",
+          {
+            id: "convention:DESIGN",
+            type: "convention",
+            summary: "Markdown design guidance",
+            tags: [],
+            data: { body: "Use full-bleed photography." },
+            source: { path: "DESIGN.md" },
+          },
+        ],
+      ]),
+    };
+    const ctx = {
+      source: { current: () => bundle },
+      cache: new LayeredCache(),
+      logger,
+      requestId: "test",
+    };
+
+    const enterprise = await handler.handle({ include_warnings: true }, ctx as never);
+    expect(enterprise.ok).toBe(false);
+    expect(enterprise.issues).toContainEqual(
+      expect.objectContaining({
+        id: "required-type-empty",
+        severity: "error",
+        type: "component",
+      }),
+    );
+
+    const r = await handler.handle({ include_warnings: true, profile: "community" }, ctx as never);
+
+    expect(r.ok).toBe(true);
+    expect(r.issues).toContainEqual(
+      expect.objectContaining({
+        id: "required-type-empty",
+        severity: "warning",
+        type: "component",
+      }),
+    );
+    expect(r.issues).not.toContainEqual(
+      expect.objectContaining({
+        id: "required-type-empty",
+        severity: "error",
+      }),
+    );
+  });
 });

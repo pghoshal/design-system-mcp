@@ -192,7 +192,7 @@ Tokens use DTCG-style JSON and are resolved through Style Dictionary.
 }
 ```
 
-Community Markdown can also define tokens in YAML frontmatter under `tokens:`. The server normalizes `value`, `type`, and `description` to DTCG `$value`, `$type`, and `$description`, then feeds the result through Style Dictionary with any `tokens/*.tokens.json` files. This supports Markdown-only repos and hybrid token+Markdown repos while keeping `resolve_token`, `validate_ui`, and `validate_composition` deterministic.
+Community Markdown can also define tokens in YAML frontmatter. Use `tokens:` for full DTCG-shaped token trees, or use top-level community sections when the design system is authored as a single Markdown file: `colors`, `spacing`, `rounded`, `radius`, `radii`, `typography`, and `components`. The server normalizes these sections to DTCG-shaped input, then feeds the result through Style Dictionary with any `tokens/*.tokens.json` files. This supports Markdown-only repos and hybrid token+Markdown repos while keeping `resolve_token`, `validate_ui`, and `validate_composition` deterministic.
 
 ```markdown
 ---
@@ -212,6 +212,30 @@ tokens:
 ```
 
 Token tables in Markdown prose are searchable guidance only. For machine-readable token resolution, put token data in Markdown frontmatter `tokens:` or in `tokens/*.tokens.json`.
+
+```markdown
+---
+colors:
+  canvas: "#000000"
+  on-dark: "#ffffff"
+spacing:
+  section: 96px
+rounded:
+  none: 0px
+typography:
+  display-xl:
+    fontFamily: "BMWTypeNextLatin, sans-serif"
+    fontSize: 80px
+components:
+  button-primary:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.on-dark}"
+---
+
+# Community Design System
+```
+
+For Markdown-only repositories that intentionally provide tokens plus prose but not full enterprise component/pattern metadata, call `inspect_coverage` with `profile: "community"`. The default `enterprise` profile still treats missing required entity types as errors.
 
 ### Markdown Docs
 

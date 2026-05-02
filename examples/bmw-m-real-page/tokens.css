@@ -1,0 +1,32 @@
+:root {
+  --colors-primary: #ffffff;
+  --colors-ink: #ffffff;
+  --colors-body: #bbbbbb;
+  --colors-body-strong: #e6e6e6;
+  --colors-muted: #7e7e7e;
+  --colors-hairline: #3c3c3c;
+  --colors-hairline-strong: #262626;
+  --colors-canvas: #000000;
+  --colors-surface-card: #1a1a1a;
+  --colors-surface-elevated: #262626;
+  --colors-surface-soft: #0d0d0d;
+  --colors-on-primary: #000000;
+  --colors-on-dark: #ffffff;
+  --colors-m-blue-light: #0066b1;
+  --colors-m-blue-dark: #1c69d4;
+  --colors-m-red: #e22718;
+  --colors-bmw-blue: #1c69d4;
+  --colors-electric-blue: #0653b6;
+  --colors-carbon-gray: #2b2b2b;
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 40px;
+  --spacing-xxl: 64px;
+  --spacing-section: 96px;
+  --rounded-none: 0;
+  --rounded-full: 9999px;
+  --font-display: BMWTypeNextLatin, Inter, Arial, sans-serif;
+  --font-body: "BMWTypeNextLatin Light", Inter, Arial, sans-serif;
+}

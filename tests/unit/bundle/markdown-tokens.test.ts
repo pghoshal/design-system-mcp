@@ -103,4 +103,58 @@ tokens:
     expect(spacing?.data.value).toBe("4px");
     expect(spacing?.source.path).toBe("tokens/a.tokens.json");
   });
+
+  it("loads community design markdown with top-level token sections", async () => {
+    await fs.writeFile(
+      path.join(tmpDir, "DESIGN.md"),
+      `---
+colors:
+  canvas: "#000000"
+  on-dark: "#ffffff"
+spacing:
+  section: 96px
+rounded:
+  none: 0px
+typography:
+  display-xl:
+    fontFamily: "BMWTypeNextLatin, sans-serif"
+    fontSize: 80px
+    fontWeight: 700
+    lineHeight: 1
+    letterSpacing: 0
+components:
+  button-primary:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.on-dark}"
+    typography: "{typography.display-xl}"
+    rounded: "{rounded.none}"
+---
+
+# Community design system
+`,
+      "utf8",
+    );
+
+    const result = await loadTokens(tmpDir, logger);
+    const canvas = result.entities.find((entity) => entity.id === "token:colors.canvas");
+    const section = result.entities.find((entity) => entity.id === "token:spacing.section");
+    const display = result.entities.find((entity) => entity.id === "token:typography.display-xl");
+    const button = result.entities.find(
+      (entity) => entity.id === "token:components.button-primary",
+    );
+
+    expect(canvas?.data.value).toBe("#000000");
+    expect(canvas?.data.$type).toBe("color");
+    expect(section?.data.value).toBe("96px");
+    expect(section?.data.$type).toBe("dimension");
+    expect(display?.data.$type).toBe("typography");
+    expect(display?.data.value).toEqual(
+      expect.objectContaining({ fontFamily: "BMWTypeNextLatin, sans-serif", fontSize: "80px" }),
+    );
+    expect(button?.data.$type).toBe("component");
+    expect(button?.data.value).toEqual(
+      expect.objectContaining({ backgroundColor: "#000000", textColor: "#ffffff" }),
+    );
+    expect(button?.source.path).toBe("DESIGN.md");
+  });
 });

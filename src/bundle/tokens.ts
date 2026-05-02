@@ -103,6 +103,19 @@ interface MarkdownTokenSources {
   cleanup: () => Promise<void>;
 }
 
+const COMMUNITY_TOKEN_SECTIONS: Readonly<Record<string, string>> = {
+  colors: "color",
+  color: "color",
+  spacing: "dimension",
+  space: "dimension",
+  rounded: "dimension",
+  radius: "dimension",
+  radii: "dimension",
+  typography: "typography",
+  components: "component",
+  component: "component",
+};
+
 async function extractMarkdownTokenSources(
   repoPath: string,
   logger: Logger,
@@ -115,9 +128,8 @@ async function extractMarkdownTokenSources(
   for (const filePath of markdownFiles) {
     const raw = await fs.readFile(filePath, "utf8");
     const { data } = matter(raw);
-    if (!isRecord(data.tokens)) continue;
 
-    const normalized = normalizeMarkdownTokens(data.tokens);
+    const normalized = extractMarkdownTokenTree(data);
     if (!isRecord(normalized)) continue;
 
     tmpDir ??= await fs.mkdtemp(path.join(os.tmpdir(), "ds-mcp-md-tokens-"));
@@ -167,7 +179,7 @@ async function listMarkdownTokenCandidateFiles(repoPath: string): Promise<string
 async function markdownHasTokenFrontmatter(filePath: string): Promise<boolean> {
   const raw = await fs.readFile(filePath, "utf8");
   const { data } = matter(raw);
-  return isRecord(data.tokens);
+  return isRecord(extractMarkdownTokenTree(data));
 }
 
 async function findMarkdownFiles(dir: string): Promise<string[]> {
@@ -204,6 +216,55 @@ function normalizeMarkdownTokens(value: unknown): unknown {
     else out[key] = normalizeMarkdownTokens(child);
   }
   return out;
+}
+
+function extractMarkdownTokenTree(data: unknown): unknown {
+  if (!isRecord(data)) return undefined;
+
+  const out: Record<string, unknown> = {};
+  if (isRecord(data.tokens)) {
+    Object.assign(out, normalizeMarkdownTokens(data.tokens));
+  }
+
+  for (const [section, tokenType] of Object.entries(COMMUNITY_TOKEN_SECTIONS)) {
+    const value = data[section];
+    if (!isRecord(value)) continue;
+    out[section] = normalizeCommunityTokenSection(value, tokenType);
+  }
+
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function normalizeCommunityTokenSection(
+  value: Record<string, unknown>,
+  tokenType: string,
+): unknown {
+  if (tokenType === "typography" || tokenType === "component") {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value)) {
+      out[key] = isDtcgToken(child)
+        ? normalizeMarkdownTokens(child)
+        : { $value: normalizeMarkdownTokens(child), $type: tokenType };
+    }
+    return out;
+  }
+
+  return normalizeCommunityTokenLeaves(value, tokenType);
+}
+
+function normalizeCommunityTokenLeaves(value: unknown, tokenType: string): unknown {
+  if (isDtcgToken(value)) return normalizeMarkdownTokens(value);
+  if (!isRecord(value)) return { $value: value, $type: tokenType };
+
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    out[key] = normalizeCommunityTokenLeaves(child, tokenType);
+  }
+  return out;
+}
+
+function isDtcgToken(value: unknown): value is Record<string, unknown> {
+  return isRecord(value) && ("$value" in value || "value" in value);
 }
 
 function safeFileName(value: string): string {

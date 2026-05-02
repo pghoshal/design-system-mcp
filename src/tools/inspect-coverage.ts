@@ -14,6 +14,7 @@ const CoverageIssueSchema = z.object({
 
 export const InspectCoverageInput = z.object({
   include_warnings: z.boolean().default(true),
+  profile: z.enum(["enterprise", "community"]).optional(),
 });
 
 export const InspectCoverageOutput = z.object({
@@ -34,8 +35,9 @@ export const handler: ToolHandler<typeof InspectCoverageInput, typeof InspectCov
   async handle(args, ctx) {
     const bundle = ctx.source.current();
     const counts = countByType(bundle);
+    const profile = args.profile ?? "enterprise";
     const issues = [
-      ...requiredTypeIssues(bundle, counts),
+      ...requiredTypeIssues(bundle, counts, profile),
       ...emptyDeclaredTypeIssues(bundle, counts),
       ...(await componentIssues(bundle)),
       ...patternIssues(bundle),
@@ -63,20 +65,25 @@ function countByType(bundle: Bundle): Record<string, number> {
   return counts;
 }
 
-function requiredTypeIssues(bundle: Bundle, counts: Record<string, number>): CoverageIssue[] {
+function requiredTypeIssues(
+  bundle: Bundle,
+  counts: Record<string, number>,
+  profile: "enterprise" | "community",
+): CoverageIssue[] {
   const issues: CoverageIssue[] = [];
   for (const type of REQUIRED_TYPES) {
+    const severity = profile === "community" && type !== "token" ? "warning" : "error";
     if (!bundle.schema.types[type]) {
       issues.push({
         id: "required-type-missing-from-schema",
-        severity: "error",
+        severity,
         type,
         message: `Required type '${type}' is missing from manifest schema.`,
       });
     } else if ((counts[type] ?? 0) === 0) {
       issues.push({
         id: "required-type-empty",
-        severity: "error",
+        severity,
         type,
         message: `Required type '${type}' has no loaded entities.`,
       });
