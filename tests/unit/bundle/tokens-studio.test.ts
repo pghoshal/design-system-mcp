@@ -150,4 +150,76 @@ describe("Tokens Studio token sources", () => {
 
     await expect(loadTokens(tmpDir, logger)).rejects.toThrow("Reference Errors");
   });
+
+  it("resolves ambiguous token-set references against the current token set when possible", async () => {
+    await fs.writeFile(
+      path.join(tmpDir, "tokens", "tokens.tokens.json"),
+      JSON.stringify({
+        "light/color": {
+          color: {
+            disabled: { value: "#cccccc", type: "color" },
+            action: {
+              disabled: { value: "{color.disabled}", type: "color" },
+            },
+          },
+        },
+        "dark/color": {
+          color: {
+            disabled: { value: "#444444", type: "color" },
+            action: {
+              disabled: { value: "{color.disabled}", type: "color" },
+            },
+          },
+        },
+        $metadata: {
+          tokenSetOrder: ["light/color", "dark/color"],
+        },
+      }),
+      "utf8",
+    );
+
+    const result = await loadTokens(tmpDir, logger);
+    const light = result.entities.find(
+      (entity) => entity.id === "token:light/color.color.action.disabled",
+    );
+    const dark = result.entities.find(
+      (entity) => entity.id === "token:dark/color.color.action.disabled",
+    );
+
+    expect(light?.data.value).toBe("#cccccc");
+    expect(light?.data.original).toBe("{light/color.color.disabled}");
+    expect(dark?.data.value).toBe("#444444");
+    expect(dark?.data.original).toBe("{dark/color.color.disabled}");
+  });
+
+  it("prefers the current token set over a root token with the same reference path", async () => {
+    await fs.writeFile(
+      path.join(tmpDir, "tokens", "tokens.tokens.json"),
+      JSON.stringify({
+        color: {
+          disabled: { value: "#999999", type: "color" },
+        },
+        "light/color": {
+          color: {
+            disabled: { value: "#cccccc", type: "color" },
+            action: {
+              disabled: { value: "{color.disabled}", type: "color" },
+            },
+          },
+        },
+        $metadata: {
+          tokenSetOrder: ["light/color"],
+        },
+      }),
+      "utf8",
+    );
+
+    const result = await loadTokens(tmpDir, logger);
+    const light = result.entities.find(
+      (entity) => entity.id === "token:light/color.color.action.disabled",
+    );
+
+    expect(light?.data.value).toBe("#cccccc");
+    expect(light?.data.original).toBe("{light/color.color.disabled}");
+  });
 });

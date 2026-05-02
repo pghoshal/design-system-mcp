@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ToolHandler } from "../server/types.js";
+import { cssTokenVar } from "../util/css-token-name.js";
 
 export const ResolveTokenInput = z.object({
   query: z.string().min(1).max(256),
@@ -87,7 +88,7 @@ function formatForPlatform(
     case "raw":
       return rawValue;
     case "css":
-      return `var(--${pathArr.join("-")})`;
+      return `var(${cssTokenVar(pathArr)})`;
     case "ios":
       return `Tokens.${pathArr.join(".")}`;
     case "android":

@@ -237,9 +237,17 @@ components:
 
 For Markdown-only repositories that intentionally provide tokens plus prose but not full enterprise component/pattern metadata, call `inspect_coverage` with `profile: "community"`. The default `enterprise` profile still treats missing required entity types as errors.
 
-Tokens Studio exports are also supported when saved under `tokens/*.tokens.json`. If a file contains token-set metadata and unqualified references such as `{color.primary.40}`, the loader rewrites those references to the single token set that owns the target, for example `{global.color.primary.40}`, before Style Dictionary resolves them. The server does not replace Style Dictionary resolution; this is a compatibility shim for common Tokens Studio exports.
+Tokens Studio exports are also supported when saved under `tokens/*.tokens.json`. If a file contains token-set metadata and unqualified references such as `{color.primary.40}`, the loader rewrites those references before Style Dictionary resolves them. When the current token set owns the target, that local target wins; for example, `light/color.color.action.disabled` can resolve `{color.disabled}` to `{light/color.color.disabled}` while `dark/color.color.action.disabled` resolves the same reference to `{dark/color.color.disabled}`. If the current token set does not own the target, the loader falls back to the single token set that owns it globally, for example `{global.color.primary.40}`. Ambiguous targets that cannot be resolved by either rule remain Style Dictionary errors. The server does not replace Style Dictionary resolution; this is a compatibility shim for common Tokens Studio exports.
+
+CSS platform output encodes non-alphanumeric token-path characters into valid, collision-resistant custom-property names. A token path like `light/color.color.action.primary.disabled` is returned as `var(--light_u002f_color-color-action-primary-disabled)`, and `validate_ui` checks that same encoded name. This keeps slash-containing token sets compatible with generated CSS while preserving the original token entity id.
 
 DTCG whole-token aliases that include a trailing `.@` marker are normalized when the target token exists. For example, `{composite.border.thin.@}` is passed to Style Dictionary as `{composite.border.thin}`. Missing targets are not guessed; they remain Style Dictionary reference errors.
+
+Real-token trial examples live under `examples/`:
+
+- `examples/material-3-token-page` — Material-style `tokens.json`
+- `examples/dtcg-token-alias-page` — DTCG whole-token alias `.@`
+- `examples/token-set-context-page` — Token Studio token sets with slash-containing names and context-local aliases
 
 ### Markdown Docs
 

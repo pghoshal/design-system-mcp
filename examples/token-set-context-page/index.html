@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Token Set Context Operations Page</title>
+    <link rel="stylesheet" href="./tokens.css" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <a class="brand" href="#">
+          <span class="brand-mark" aria-hidden="true">CT</span>
+          Context Tokens
+        </a>
+        <nav class="nav" aria-label="Primary">
+          <a href="#mission">Mission</a>
+          <a href="#readiness">Readiness</a>
+          <a href="#handoff">Handoff</a>
+        </nav>
+        <span class="status-pill">191 tokens loaded</span>
+      </header>
+
+      <section class="workspace" id="mission">
+        <article class="hero" aria-label="Operations command dashboard">
+          <div class="hero-copy">
+            <span class="eyebrow">Contextual Token Studio trial</span>
+            <h1>One control surface, two theme contexts.</h1>
+            <p>
+              This page uses the real token-set structure from tokens (2).json, including
+              light/color, dark/color, universal, primitive, and responsive breakpoint sets.
+            </p>
+            <div class="action-row">
+              <a class="button" href="#readiness">Open readiness</a>
+              <a class="button secondary" href="#handoff">Inspect handoff</a>
+            </div>
+          </div>
+          <div class="hero-metrics" id="readiness">
+            <div class="metric">
+              <strong>191</strong>
+              <span>Token entities exposed by MCP</span>
+            </div>
+            <div class="metric">
+              <strong>109</strong>
+              <span>Token references scanned; contextual aliases are qualified when needed</span>
+            </div>
+            <div class="metric">
+              <strong>2</strong>
+              <span>Light and dark disabled aliases resolved by current token set</span>
+            </div>
+          </div>
+        </article>
+
+        <aside class="side" id="handoff">
+          <section class="panel dark">
+            <span class="eyebrow">Dark context</span>
+            <h2>Background and text roles stay in the dark token set.</h2>
+            <p>
+              The HTTP and stdio smoke tests resolved dark background tokens to sanitized CSS
+              custom properties and validated generated TSX without unknown-token errors.
+            </p>
+          </section>
+
+          <section class="panel">
+            <span class="eyebrow">Handoff checks</span>
+            <h2>What the harness consumed</h2>
+            <div class="timeline">
+              <div class="timeline-row">
+                <span class="dot" aria-hidden="true"></span>
+                <span>describe_schema reported 191 entities from a default manifest.</span>
+              </div>
+              <div class="timeline-row">
+                <span class="dot" aria-hidden="true"></span>
+                <span>resolve_token returned valid CSS variables for slash token-set paths.</span>
+              </div>
+              <div class="timeline-row">
+                <span class="dot" aria-hidden="true"></span>
+                <span>validate_ui accepted the same variable names in generated interface code.</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <span class="eyebrow">Token roles</span>
+            <h2>Selected palette</h2>
+            <div class="swatches" aria-label="Resolved color token swatches">
+              <span class="swatch brand" title="light/color.color.brand"></span>
+              <span class="swatch primary" title="light/color.color.action.primary.default"></span>
+              <span class="swatch surface" title="light/color.color.surface.hover"></span>
+              <span class="swatch dark" title="dark/color.color.background.default"></span>
+            </div>
+          </section>
+        </aside>
+      </section>
+    </main>
+  </body>
+</html>

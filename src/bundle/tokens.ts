@@ -371,7 +371,13 @@ function normalizeTokenStudioReferences(
   if (tokenSetOwners.length === 0) return { value, changed: false };
 
   let changed = false;
-  const rewritten = rewriteReferences(value, (ref) => {
+  const rewritten = rewriteReferences(value, (ref, path) => {
+    const currentSet = currentTokenSet(path, tokenSetOwners);
+    if (currentSet && hasPath(value[currentSet], ref.split("."))) {
+      changed = true;
+      return `${currentSet}.${ref}`;
+    }
+
     if (hasPath(value, ref.split("."))) return ref;
 
     const matches = new Set(
@@ -408,6 +414,13 @@ function normalizeDtcgWholeTokenAliases(
   return { value: rewritten, changed };
 }
 
+function currentTokenSet(path: string[], tokenSetOwners: TokenSetOwner[]): string | undefined {
+  return tokenSetOwners
+    .map((owner) => owner.set)
+    .filter((set) => path[0] === set || path.join(".").startsWith(`${set}.`))
+    .sort((a, b) => b.length - a.length)[0];
+}
+
 function tokenSetSearchOrder(root: Record<string, unknown>): string[] {
   const existing = Object.keys(root).filter((key) => !key.startsWith("$") && isRecord(root[key]));
   const order =
@@ -420,21 +433,31 @@ function tokenSetSearchOrder(root: Record<string, unknown>): string[] {
   ];
 }
 
-function rewriteReferences(value: unknown, rewrite: (ref: string) => string): unknown {
-  if (Array.isArray(value)) return value.map((item) => rewriteReferences(item, rewrite));
-  if (typeof value === "string") return rewriteReferenceString(value, rewrite);
+function rewriteReferences(
+  value: unknown,
+  rewrite: (ref: string, path: string[]) => string,
+  path: string[] = [],
+): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item, index) => rewriteReferences(item, rewrite, [...path, String(index)]));
+  }
+  if (typeof value === "string") return rewriteReferenceString(value, rewrite, path);
   if (!isRecord(value)) return value;
 
   const out: Record<string, unknown> = {};
   for (const [key, child] of Object.entries(value)) {
-    out[key] = rewriteReferences(child, rewrite);
+    out[key] = rewriteReferences(child, rewrite, [...path, key]);
   }
   return out;
 }
 
-function rewriteReferenceString(value: string, rewrite: (ref: string) => string): string {
+function rewriteReferenceString(
+  value: string,
+  rewrite: (ref: string, path: string[]) => string,
+  path: string[],
+): string {
   return value.replace(/\{([^}]+)\}/g, (match, ref: string) => {
-    const next = rewrite(ref.trim());
+    const next = rewrite(ref.trim(), path);
     return next === ref.trim() ? match : `{${next}}`;
   });
 }

@@ -1,0 +1,88 @@
+:root {
+  --universal-fontfamily-primary: "Proxima Nova", Arial, sans-serif;
+  --universal-fontfamily-secondary: "Sohne Breit", Arial, sans-serif;
+  --universal-fontweight-body-bold: 700;
+  --universal-fontweight-display-bold: 800;
+  --universal-fontweight-display-default: 700;
+  --universal-fontweight-heading-default: 600;
+  --universal-lineheight-body: 138%;
+  --universal-lineheight-heading: 110%;
+  --universal-lineheight-display: 100%;
+  --universal-border-default: 2px;
+  --universal-border-subtle: 1px;
+
+  --primitive-spacing-004: 4px;
+  --primitive-spacing-008: 8px;
+  --primitive-spacing-012: 12px;
+  --primitive-spacing-016: 16px;
+  --primitive-spacing-024: 24px;
+  --primitive-spacing-032: 32px;
+  --primitive-spacing-040: 40px;
+  --primitive-spacing-048: 48px;
+  --primitive-spacing-064: 64px;
+
+  --light_u002f_color-color-brand: #006eb5;
+  --light_u002f_color-color-action-primary-default: #d12800;
+  --light_u002f_color-color-action-primary-hover: #ee402d;
+  --light_u002f_color-color-action-primary-disabled: #d4d6d8;
+  --light_u002f_color-color-action-secondary-default: #006eb5;
+  --light_u002f_color-color-surface-default: #f7f7f7;
+  --light_u002f_color-color-surface-hover: #edeff0;
+  --light_u002f_color-color-background-default: #ffffff;
+  --light_u002f_color-color-background-inverse: #232e3d;
+  --light_u002f_color-color-border-default: #000000;
+  --light_u002f_color-color-border-subtle: #d4d6d8;
+  --light_u002f_color-color-text-default: #000000;
+  --light_u002f_color-color-text-subtle: #677383;
+  --light_u002f_color-color-text-inverse: #ffffff;
+
+  --dark_u002f_color-color-background-default: #232e3d;
+  --dark_u002f_color-color-surface-default: #55606e;
+  --dark_u002f_color-color-text-default: #ffffff;
+  --dark_u002f_color-color-text-subtle: #d4d6d8;
+  --dark_u002f_color-color-border-subtle: #d4d6d8;
+  --dark_u002f_color-color-action-primary-default: #d12800;
+
+  --breakpoints_u002f_desktop-fontsize-display-large: 100px;
+  --breakpoints_u002f_desktop-fontsize-display-medium: 80px;
+  --breakpoints_u002f_desktop-fontsize-body-default: 20px;
+  --breakpoints_u002f_desktop-fontsize-body-small: 16px;
+  --breakpoints_u002f_desktop-fontsize-heading-small: 24px;
+  --breakpoints_u002f_desktop-spacing-gutter: 24px;
+  --breakpoints_u002f_tablet-fontsize-display-large: 80px;
+  --breakpoints_u002f_tablet-fontsize-body-default: 16px;
+  --breakpoints_u002f_tablet-fontsize-body-small: 14px;
+  --breakpoints_u002f_tablet-fontsize-heading-small: 24px;
+  --breakpoints_u002f_tablet-spacing-gutter: 12px;
+  --breakpoints_u002f_mobile-fontsize-display-large: 56px;
+  --breakpoints_u002f_mobile-fontsize-body-default: 16px;
+  --breakpoints_u002f_mobile-fontsize-body-small: 14px;
+  --breakpoints_u002f_mobile-fontsize-heading-small: 24px;
+  --breakpoints_u002f_mobile-spacing-gutter: 12px;
+
+  --page-gutter: var(--breakpoints_u002f_desktop-spacing-gutter);
+  --display-size: var(--breakpoints_u002f_desktop-fontsize-display-medium);
+  --body-size: var(--breakpoints_u002f_desktop-fontsize-body-default);
+  --small-body-size: var(--breakpoints_u002f_desktop-fontsize-body-small);
+  --heading-small-size: var(--breakpoints_u002f_desktop-fontsize-heading-small);
+}
+
+@media (max-width: 900px) {
+  :root {
+    --page-gutter: var(--breakpoints_u002f_tablet-spacing-gutter);
+    --display-size: var(--breakpoints_u002f_tablet-fontsize-display-large);
+    --body-size: var(--breakpoints_u002f_tablet-fontsize-body-default);
+    --small-body-size: var(--breakpoints_u002f_tablet-fontsize-body-small);
+    --heading-small-size: var(--breakpoints_u002f_tablet-fontsize-heading-small);
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --page-gutter: var(--breakpoints_u002f_mobile-spacing-gutter);
+    --display-size: var(--breakpoints_u002f_mobile-fontsize-display-large);
+    --body-size: var(--breakpoints_u002f_mobile-fontsize-body-default);
+    --small-body-size: var(--breakpoints_u002f_mobile-fontsize-body-small);
+    --heading-small-size: var(--breakpoints_u002f_mobile-fontsize-heading-small);
+  }
+}

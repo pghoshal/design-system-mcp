@@ -1,4 +1,5 @@
 import type { Bundle, Entity, RuleLanguage, Violation } from "../bundle/types.js";
+import { cssTokenVar } from "../util/css-token-name.js";
 
 export const SEMANTIC_TOKEN_RULE_IDS = [
   "no-raw-length-values",
@@ -72,7 +73,7 @@ function cssTokenIndex(bundle: Bundle): CssTokenIndex {
     if (entity.type !== "token") continue;
     const path = entity.data.path;
     if (!Array.isArray(path) || !path.every((p) => typeof p === "string")) continue;
-    const cssVar = `--${path.join("-")}`;
+    const cssVar = cssTokenVar(path);
     const stem = cssVarStem(cssVar);
     if (stem) tokenStems.add(stem);
     const original = entity.data.original;
