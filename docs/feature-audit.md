@@ -360,7 +360,7 @@ There is now a CLI path for invoking `validate_ui` outside MCP:
 
 ## 19. Bundle Quality Checks — ✅ implemented
 
-`src/tools/inspect-coverage.ts` reports deterministic bundle-quality issues at refresh time:
+`src/tools/inspect-coverage.ts` reports deterministic bundle-quality issues when the MCP tool is called against the currently loaded bundle:
 
 - ✅ schema completeness (`required-type-missing-from-schema`, `declared-type-empty`)
 - ✅ missing related entity (`relation-target-missing`)
@@ -472,7 +472,7 @@ What is intentionally not separate-schema'd:
 
 ## 24. Harness-Enforced Modes — ✅ implemented (server-published, CLI-enforced)
 
-The server publishes a machine-readable workflow contract at `design://workflow` with mode definitions, state-machine transitions, final-gate requirements, and CI commands. The CLI enforces the hard final gate through `--mode final_check`.
+The server publishes a machine-readable workflow contract at `design://workflow` with mode definitions, state-machine transition guidance, final-gate requirements, and CI commands. The CLI enforces the hard final evidence/validation gate through `--mode final_check`.
 
 - ✅ `plan_only` mode is represented in `design://workflow`
 - ✅ `generate` mode is represented in `design://workflow`
@@ -481,11 +481,13 @@ The server publishes a machine-readable workflow contract at `design://workflow`
 - ✅ `final_check` mode is represented in `design://workflow`
 - ✅ final gate is CI-enforceable via `pnpm validate -- --mode final_check --composition composition.json <file...>`
 - ✅ `final_check` fails when `validate_composition` evidence is missing
+- ✅ `final_check` fails when `validate_ui` evidence is missing
 - ✅ `final_check` fails when `validate_ui` / `validate_composition` returns error-severity violations
+- ✅ JSON and SARIF outputs both report harness missing-evidence failures
 
-Important boundary: an arbitrary MCP client can still ignore a resource contract. The robust enforcement point is the harness or CI runner invoking the CLI gate.
+Important boundary: an arbitrary MCP client can still ignore a resource contract, and the CLI does not persist a multi-step session history. The robust enforcement point implemented here is the harness or CI runner invoking the final-check evidence gate.
 
-**Status:** server-side contract and CI/harness blocking gate are implemented. IDE-native hard blocking remains client integration work, but the MCP server now publishes the contract and the repo ships an enforceable final gate.
+**Status:** server-side contract and CI/harness final-check blocking gate are implemented. IDE-native hard blocking and persisted multi-step state-machine enforcement remain client integration work, but the MCP server now publishes the contract and the repo ships an enforceable final gate.
 
 ---
 
@@ -523,6 +525,7 @@ Important boundary: an arbitrary MCP client can still ignore a resource contract
 The original 24 advanced-feature gaps are now closed at the server/CLI-contract level. Remaining work is future depth, not missing baseline functionality:
 
 - **Deeper AST adapters** (21 follow-up depth) — className/token usage and plugin escape hatch are still future work.
+- **Persisted harness sessions** (24 follow-up depth) — clients can store and validate step-by-step workflow history if they need IDE-native state-machine blocking beyond the CLI final gate.
 
 The remaining opportunities are depth expansions, not yellow audit gaps. Rules can be added incrementally (each is ~20-40 LOC), and schema fields can be extended as teams formalize more design-system knowledge.
 

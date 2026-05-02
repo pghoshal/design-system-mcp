@@ -174,6 +174,66 @@ describe("validate CLI", () => {
     });
   });
 
+  it("final_check mode reports missing composition evidence in SARIF", async () => {
+    const file = path.join(tmpDir, "clean.tsx");
+    await fs.writeFile(file, "const color = 'var(--color-action-primary)';\n", "utf8");
+
+    await expect(
+      execFileAsync(TSX_BIN, [
+        ENTRY,
+        "--source",
+        FIXTURE,
+        "--mode",
+        "final_check",
+        "--format",
+        "sarif",
+        file,
+      ]),
+    ).rejects.toMatchObject({
+      code: 1,
+      stdout: expect.stringContaining('"ruleId": "harness/missing-evidence"'),
+    });
+  });
+
+  it("final_check mode reports missing UI evidence in SARIF", async () => {
+    const plan = path.join(tmpDir, "composition.json");
+    await fs.writeFile(
+      plan,
+      JSON.stringify({
+        pattern: "pattern:confirmation-dialog",
+        platform: "web",
+        framework: "react",
+        components: [
+          { id: "component:card", props: { title: "Delete project?", tone: "danger" } },
+          {
+            id: "component:button",
+            parent: "component:card",
+            props: { variant: "danger", children: "Delete project" },
+          },
+        ],
+        tokens: ["token:color.action.danger", "token:color.surface.default"],
+      }),
+      "utf8",
+    );
+
+    await expect(
+      execFileAsync(TSX_BIN, [
+        ENTRY,
+        "--source",
+        FIXTURE,
+        "--mode",
+        "final_check",
+        "--format",
+        "sarif",
+        "--composition",
+        plan,
+      ]),
+    ).rejects.toMatchObject({
+      code: 1,
+      stdout: expect.stringContaining('"missingEvidence": ['),
+    });
+  });
+
   it("final_check mode passes with clean code and composition evidence", async () => {
     const file = path.join(tmpDir, "clean.tsx");
     const plan = path.join(tmpDir, "composition.json");

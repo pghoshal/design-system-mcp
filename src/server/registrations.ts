@@ -54,8 +54,10 @@ const WORKFLOW_CONTRACT = {
   finalGate: {
     mode: "final_check",
     requiredTools: ["validate_composition", "validate_ui"],
+    requiredEvidence: ["validate_composition", "validate_ui"],
     cli: "pnpm validate -- --source <design-system-repo> --mode final_check --composition composition.json <file...>",
-    requiredOutcome: "No error-severity violations may remain before generated UI is accepted.",
+    requiredOutcome:
+      "No error-severity violations and no missing required evidence may remain before generated UI is accepted.",
   },
   harnessPolicy: {
     enforceableByServer: false,

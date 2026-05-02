@@ -148,7 +148,7 @@ async function main(argv: string[]): Promise<number> {
     };
 
     process.stdout.write(
-      `${JSON.stringify(parsed.format === "sarif" ? toSarif(results, compositions) : payload, null, 2)}\n`,
+      `${JSON.stringify(parsed.format === "sarif" ? toSarif(results, compositions, harness) : payload, null, 2)}\n`,
     );
     return errorCount === 0 && missingEvidenceCount === 0 ? 0 : 1;
   } finally {
@@ -277,6 +277,7 @@ function harnessGate(
 function toSarif(
   results: FileResult[],
   compositions: CompositionResult[],
+  harness?: { mode: HarnessMode; missingEvidence: string[] } | undefined,
 ): Record<string, unknown> {
   const rules = new Map<string, { id: string; shortDescription: { text: string } }>();
   const sarifResults: Array<Record<string, unknown>> = [];
@@ -342,6 +343,27 @@ function toSarif(
         },
       });
     }
+  }
+
+  if (harness && harness.missingEvidence.length > 0) {
+    const ruleId = "harness/missing-evidence";
+    rules.set(ruleId, {
+      id: ruleId,
+      shortDescription: { text: "Required design-system harness validation evidence is missing." },
+    });
+    sarifResults.push({
+      ruleId,
+      level: "error",
+      message: {
+        text: `${harness.mode} is missing required evidence: ${harness.missingEvidence.join(", ")}.`,
+      },
+      locations: [],
+      properties: {
+        kind: "harness",
+        mode: harness.mode,
+        missingEvidence: harness.missingEvidence,
+      },
+    });
   }
 
   return {

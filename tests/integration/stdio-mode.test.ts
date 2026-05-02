@@ -158,7 +158,7 @@ describe("Phase 4 — stdio transport", () => {
       workflowBody && "text" in workflowBody ? (workflowBody.text as string) : "";
     const workflowJson = JSON.parse(workflowText) as {
       modes: Array<{ name: string; requiredEvidence: string[] }>;
-      finalGate: { mode: string; requiredTools: string[] };
+      finalGate: { mode: string; requiredTools: string[]; requiredEvidence: string[] };
     };
     expect(workflowJson.modes).toContainEqual(
       expect.objectContaining({
@@ -168,6 +168,7 @@ describe("Phase 4 — stdio transport", () => {
     );
     expect(workflowJson.finalGate.mode).toBe("final_check");
     expect(workflowJson.finalGate.requiredTools).toContain("validate_composition");
+    expect(workflowJson.finalGate.requiredEvidence).toContain("validate_ui");
   });
 
   it("prompts/list and prompts/get work over stdio", async () => {
