@@ -263,6 +263,10 @@ Real-token trial examples live under `examples/`:
 - `examples/dtcg-token-alias-page` — DTCG whole-token alias `.@`
 - `examples/token-set-context-page` — Token Studio token sets with slash-containing names and context-local aliases
 
+**Community Markdown / getdesign handoff trial**
+
+![BMW M community Markdown sample](docs/bmw-m-sample.jpg)
+
 **Token Studio contextual token-set trial**
 
 ![Token Studio contextual token-set sample](docs/sample-vs-token.png)
@@ -270,6 +274,10 @@ Real-token trial examples live under `examples/`:
 **Material 3 token export trial**
 
 ![Material 3 token sample](docs/material-3-sample.png)
+
+**DTCG whole-token alias trial**
+
+![DTCG whole-token alias sample](docs/dtcg-alias-sample.jpg)
 
 ### Token Source Compatibility
 
