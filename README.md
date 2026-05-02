@@ -38,10 +38,6 @@ These are generated trial pages from real token and handoff sources, not marketi
 
 ![Material 3 token sample](docs/material-3-sample.png)
 
-**DTCG whole-token alias trial**
-
-![DTCG whole-token alias sample](docs/dtcg-alias-sample.jpg)
-
 ## Current Status
 
 Implemented:
