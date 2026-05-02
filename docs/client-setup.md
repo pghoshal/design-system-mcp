@@ -41,7 +41,7 @@ The required environment is:
 
 ### Claude Code
 
-Add to `~/.claude/mcp_servers.json` (or wherever your Claude Code config lives):
+Add to your Claude Code MCP server config file:
 
 ```json
 {
@@ -285,7 +285,7 @@ Once connected, the agent has access to:
 
 Plus MCP **resources** (`design://manifest`, `design://schema`, `design://entity/{id}`, `design://principle/{id}`, `design://pattern/{id}`, `design://component/{id}`, `design://prompt/{name}`) and any **prompts** the source repo declares under `prompts/*.prompt.md`.
 
-See `.claude/flows.md` for full input/output contracts on every tool.
+See the MCP Tools section in `README.md` for the public tool list and workflow guidance.
 
 ---
 

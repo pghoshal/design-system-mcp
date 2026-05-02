@@ -1,6 +1,6 @@
 # Runbook — operating the design-system MCP server
 
-> Audience: the on-call operator. This file pairs with `.claude/deployment.md` (architecture-side facts) and `docs/client-setup.md` (what end users see).
+> Audience: the on-call operator. This file pairs with `docs/client-setup.md` (what end users see).
 
 This server is **single-instance** by design. There is no cluster, no Redis, no DB, no object store. State is the in-memory bundle, derived from a Git checkout on disk. Recovery procedures are correspondingly simple: when in doubt, restart the container.
 
@@ -13,7 +13,7 @@ This server is **single-instance** by design. There is no cluster, no Redis, no 
 | What's the current bundle version? | `GET /version` |
 | Is the server healthy? | `GET /healthz` (alive) and `GET /readyz` (bundle loaded) |
 | Force a refresh now (skip the polling interval) | `POST /admin/refresh` with `Authorization: Bearer $DS_MCP_ADMIN_TOKEN` |
-| What environment knobs exist? | `.claude/deployment.md` §3 or `src/config.ts` |
+| What environment knobs exist? | `src/config.ts` and `.env.example` |
 | Where do logs go? | stdout (HTTP mode) / stderr (stdio mode); structured JSON via Pino |
 | Where is the Git checkout on disk? | `$DS_MCP_CACHE_DIR/<derived-slug>/` (default `~/.cache/ds-mcp`) |
 
@@ -21,7 +21,7 @@ This server is **single-instance** by design. There is no cluster, no Redis, no 
 
 ## Deploy
 
-The CI pipeline at `.github/workflows/ci.yml` runs lint + typecheck + test + build on every PR. Container builds happen on git tag (see `.claude/deployment.md` §5.2).
+The CI pipeline at `.github/workflows/ci.yml` runs lint + typecheck + test + build on every PR.
 
 Deploy targets and their entry points:
 
@@ -29,7 +29,7 @@ Deploy targets and their entry points:
 - **Kubernetes:** `kubectl apply -f deploy/k8s/`
 - **Plain VPS / docker-compose:** `docker compose up -d`
 
-In all cases the rollout strategy is **recreate** (single instance, brief unavailability acceptable). Do not configure rolling updates with `replicas > 1` — the codebase is not designed for it (see `.claude/hallucinate.md`).
+In all cases the rollout strategy is **recreate** (single instance, brief unavailability acceptable). Do not configure rolling updates with `replicas > 1` — the codebase is intentionally single-instance.
 
 ### Pre-deploy checklist
 
@@ -185,10 +185,10 @@ There is no persistent server state to back up — the entire system is a statel
 
 ## Capacity & sizing
 
-The capacity plan in `.claude/hld.md` §8 (50 engineers × 40 sessions/hour × 5 calls per session ≈ 30 RPS peak) fits comfortably in 1 vCPU / 512 MB. If observed usage exceeds those numbers and shows real load:
+The baseline capacity assumption (roughly 50 engineers × 40 sessions/hour × 5 calls per session, or about 30 RPS peak) fits comfortably in 1 vCPU / 512 MB. If observed usage exceeds those numbers and shows real load:
 
 - **Vertical first.** Bump CPU and memory.
-- **Horizontal is out of scope.** Adding replicas is not a config change; the codebase has explicit single-instance assumptions (see `.claude/hallucinate.md` §1). Multi-instance is a fresh design proposal, not a runbook step.
+- **Horizontal is out of scope.** Adding replicas is not a config change; the codebase has explicit single-instance assumptions. Multi-instance is a fresh design proposal, not a runbook step.
 
 Memory red flag: RSS climbing without bound across refreshes suggests the old bundle isn't being GC'd because something still references it. Capture a heap dump and file an issue.
 
@@ -199,4 +199,4 @@ Memory red flag: RSS climbing without bound across refreshes suggests the old bu
 - The source design-system repo's own CI / PR validation — that lives in the source repo, not here
 - Figma export workflows — handled by UX team tooling
 - Client-side IDE config — see `docs/client-setup.md`
-- Multi-tenancy, SSO, regional fail-over — explicitly out of scope; see `.claude/context.md` "Out of scope"
+- Multi-tenancy, SSO, and regional fail-over are explicitly out of scope for this single-instance server.

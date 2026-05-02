@@ -67,7 +67,7 @@ Implemented:
 - MCP prompts registered from the loaded source repo (`prompts/*.prompt.md`)
 - MCP resources for `design://manifest`, `design://schema`, `design://entity/{id}`, plus per-type templates `design://principle/{id}`, `design://pattern/{id}`, `design://component/{id}`, `design://prompt/{name}`
 - Operator runbook (`docs/runbook.md`), client setup guide (`docs/client-setup.md`), sample Fly + Kubernetes deployment manifests under `deploy/`
-- Performance baseline gates in CI (`tests/integration/perf-baseline.test.ts`) backed by the SLO table in `.claude/lld.md` §5.1
+- Performance baseline gates in CI (`tests/integration/perf-baseline.test.ts`)
 - CI-friendly validation CLI (`pnpm validate -- --source <design-system-repo> <file...>`) with JSON/SARIF output, composition-plan validation, and nonzero exit on error violations
 - Machine-readable workflow contract at `design://workflow` for design-system-first agent harnesses
 
@@ -798,7 +798,7 @@ pnpm validate -- --source ./path/to/design-system --mode final_check --compositi
 
 The command prints JSON or SARIF and exits `1` if any error-severity `validate_ui` / `validate_composition` violation is found. In `--mode final_check`, it also exits `1` when required harness evidence is missing, such as running UI validation without a composition plan.
 
-This project follows test-first development for non-trivial changes. Read [.claude/tdd.md](./.claude/tdd.md) and [.claude/critic.md](./.claude/critic.md) before making behavioral changes.
+This project follows test-first development for non-trivial changes. Add focused tests first, implement the smallest safe change, then run the relevant verification before committing.
 
 ## Repository Layout
 
@@ -824,11 +824,10 @@ tests/
 
 Before opening a pull request:
 
-1. Read [AGENTS.md](./AGENTS.md) or [CLAUDE.md](./CLAUDE.md).
-2. Keep the single-instance architecture intact.
-3. Do not add Redis, a database, object storage, queues, or multi-instance coordination.
-4. Add or update tests before changing behavior.
-5. Run:
+1. Keep the single-instance architecture intact.
+2. Do not add Redis, a database, object storage, queues, or multi-instance coordination.
+3. Add or update tests before changing behavior.
+4. Run:
 
 ```bash
 pnpm lint

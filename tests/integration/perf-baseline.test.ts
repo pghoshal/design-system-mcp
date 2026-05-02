@@ -77,7 +77,7 @@ afterAll(async () => {
   await manager.stop();
 });
 
-describe("Phase 4 — performance baselines (gates against the SLO table in .claude/lld.md §5.1)", () => {
+describe("Phase 4 — performance baselines", () => {
   // Generous CI multipliers: SLOs are written for production-shape hardware;
   // CI runners and dev laptops take longer. We multiply the SLO by `MULT` so
   // the gate catches a *clear* regression (10x+ slowdown) without false-failing

@@ -191,7 +191,7 @@ design://prompt/{name}           template
 ```
 
 - ✅ design://manifest, design://schema, design://entity/{id}, design://component/{id}, design://pattern/{id}
-- ❌ design://tokens/{category} — explicitly excluded; tokens have a free-form dotted-path namespace (no stable categories). Use `design://entity/token:<dot.path>` or `resolve_token`. Documented in `.claude/flows.md` §3.
+- ❌ design://tokens/{category} — explicitly excluded; tokens have a free-form dotted-path namespace (no stable categories). Use `design://entity/token:<dot.path>` or `resolve_token`.
 - ❌ design://rules — not a resource yet
 - ✅ design://workflow — handoff/harness contract from #8
 
