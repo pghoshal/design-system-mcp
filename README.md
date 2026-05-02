@@ -263,6 +263,8 @@ Real-token trial examples live under `examples/`:
 - `examples/dtcg-token-alias-page` — DTCG whole-token alias `.@`
 - `examples/token-set-context-page` — Token Studio token sets with slash-containing names and context-local aliases
 
+![Sample UI versus token evidence](docs/sample-vs-token.svg)
+
 ### Token Source Compatibility
 
 | Source style | Supported | Notes |
