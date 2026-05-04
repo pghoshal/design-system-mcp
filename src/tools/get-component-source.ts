@@ -17,12 +17,16 @@ export const GetComponentSourceInput = z.object({
   includeStories: z.boolean().default(true),
   includeTests: z.boolean().default(false),
   maxBytesPerFile: z.number().int().min(512).max(100_000).default(30_000),
+  maxFiles: z.number().int().min(1).max(200).default(50),
+  maxTotalBytes: z.number().int().min(512).max(1_000_000).default(200_000),
 });
 
 export const GetComponentSourceOutput = z.object({
   id: z.string(),
   sourcePath: z.string(),
   files: z.array(SourceFileSchema),
+  totalBytes: z.number().int().nonnegative(),
+  truncated: z.boolean(),
   bundleVersion: z.string(),
 });
 
@@ -63,7 +67,9 @@ export const handler: ToolHandler<typeof GetComponentSourceInput, typeof GetComp
       return {
         id: entity.id,
         sourcePath: entity.source.path,
-        files,
+        files: files.files,
+        totalBytes: files.totalBytes,
+        truncated: files.truncated,
         bundleVersion: bundle.version,
       };
     },
@@ -73,25 +79,43 @@ async function readComponentFiles(
   componentDir: string,
   repoRoot: string,
   args: z.infer<typeof GetComponentSourceInput>,
-): Promise<z.infer<typeof SourceFileSchema>[]> {
+): Promise<{
+  files: z.infer<typeof SourceFileSchema>[];
+  totalBytes: number;
+  truncated: boolean;
+}> {
   const out: z.infer<typeof SourceFileSchema>[] = [];
+  let totalBytes = 0;
+  let truncated = false;
   for (const file of await walk(componentDir)) {
+    if (out.length >= args.maxFiles) {
+      truncated = true;
+      break;
+    }
     const ext = path.extname(file);
     if (!SOURCE_EXTENSIONS.has(ext)) continue;
     const base = path.basename(file).toLowerCase();
     if (!args.includeStories && base.includes(".stories.")) continue;
     if (!args.includeTests && /\.(test|spec)\./.test(base)) continue;
     const stat = await fs.stat(file);
-    const bytesToRead = Math.min(stat.size, args.maxBytesPerFile);
+    const remainingTotal = Math.max(0, args.maxTotalBytes - totalBytes);
+    if (remainingTotal === 0) {
+      truncated = true;
+      break;
+    }
+    const bytesToRead = Math.min(stat.size, args.maxBytesPerFile, remainingTotal);
     const handle = await fs.open(file, "r");
     try {
       const buffer = Buffer.alloc(bytesToRead);
       await handle.read(buffer, 0, bytesToRead, 0);
+      totalBytes += bytesToRead;
+      const fileTruncated = stat.size > bytesToRead;
+      if (fileTruncated) truncated = true;
       out.push({
         path: path.relative(repoRoot, file),
         language: languageForExtension(ext),
         bytes: stat.size,
-        truncated: stat.size > args.maxBytesPerFile,
+        truncated: fileTruncated,
         content: buffer.toString("utf8"),
       });
     } finally {
@@ -99,7 +123,7 @@ async function readComponentFiles(
     }
   }
   out.sort((a, b) => a.path.localeCompare(b.path));
-  return out;
+  return { files: out, totalBytes, truncated };
 }
 
 async function walk(dir: string): Promise<string[]> {

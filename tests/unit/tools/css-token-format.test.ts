@@ -56,6 +56,18 @@ describe("CSS token formatting across tools", () => {
     });
   });
 
+  it("formats tokens for Flutter consumers", async () => {
+    const result = await resolveToken.handle(
+      { query: "disabled action light", platform: "flutter", limit: 5 },
+      ctx,
+    );
+
+    expect(result.matches[0]).toMatchObject({
+      id: "token:light/color.color.action.disabled",
+      value: "AtlasTokens.lightColor.color.action.disabled",
+    });
+  });
+
   it("validates the same sanitized CSS custom property name", async () => {
     const result = await validateUi.handle(
       {

@@ -10,6 +10,10 @@ import {
   ValidateCompositionInput,
   handler as validateCompositionHandler,
 } from "./tools/validate-composition.js";
+import {
+  ValidateDesignContractInput,
+  handler as validateDesignContractHandler,
+} from "./tools/validate-design-contract.js";
 import { handler as validateUiHandler } from "./tools/validate-ui.js";
 import { LayeredCache } from "./util/lru.js";
 
@@ -20,6 +24,7 @@ interface CliOptions {
   sourcePath: string;
   files: string[];
   compositions: string[];
+  contracts: string[];
   language?: RuleLanguage | undefined;
   rules: string[];
   format: "json" | "sarif";
@@ -42,6 +47,13 @@ interface CompositionResult {
   bundleVersion: string;
 }
 
+interface ContractResult {
+  path: string;
+  ok: boolean;
+  violations: Awaited<ReturnType<typeof validateDesignContractHandler.handle>>["violations"];
+  bundleVersion: string;
+}
+
 async function main(argv: string[]): Promise<number> {
   const parsed = parseArgs(argv);
   if ("error" in parsed) {
@@ -61,6 +73,7 @@ async function main(argv: string[]): Promise<number> {
     await source.initial();
     const results: FileResult[] = [];
     const compositions: CompositionResult[] = [];
+    const contracts: ContractResult[] = [];
 
     for (const file of parsed.files) {
       const abs = path.resolve(file);
@@ -107,12 +120,34 @@ async function main(argv: string[]): Promise<number> {
       });
     }
 
+    for (const file of parsed.contracts) {
+      const abs = path.resolve(file);
+      const raw = JSON.parse(await fs.readFile(abs, "utf8")) as unknown;
+      const input = ValidateDesignContractInput.parse(raw);
+      const result = await validateDesignContractHandler.handle(input, {
+        source,
+        cache,
+        logger,
+        requestId: "validate-cli",
+      });
+      contracts.push({
+        path: path.relative(process.cwd(), abs),
+        ok: result.ok,
+        violations: result.violations,
+        bundleVersion: result.bundleVersion,
+      });
+    }
+
     const errorCount =
       results.reduce(
         (count, file) => count + file.violations.filter((v) => v.severity === "error").length,
         0,
       ) +
       compositions.reduce(
+        (count, file) => count + file.violations.filter((v) => v.severity === "error").length,
+        0,
+      ) +
+      contracts.reduce(
         (count, file) => count + file.violations.filter((v) => v.severity === "error").length,
         0,
       );
@@ -124,6 +159,10 @@ async function main(argv: string[]): Promise<number> {
       compositions.reduce(
         (count, file) => count + file.violations.filter((v) => v.severity === "warning").length,
         0,
+      ) +
+      contracts.reduce(
+        (count, file) => count + file.violations.filter((v) => v.severity === "warning").length,
+        0,
       );
     const infoCount =
       results.reduce(
@@ -133,10 +172,18 @@ async function main(argv: string[]): Promise<number> {
       compositions.reduce(
         (count, file) => count + file.violations.filter((v) => v.severity === "info").length,
         0,
+      ) +
+      contracts.reduce(
+        (count, file) => count + file.violations.filter((v) => v.severity === "info").length,
+        0,
       );
 
     const harness = parsed.mode
-      ? harnessGate(parsed.mode, { files: results.length, compositions: compositions.length })
+      ? harnessGate(parsed.mode, {
+          files: results.length,
+          compositions: compositions.length,
+          contracts: contracts.length,
+        })
       : undefined;
     const missingEvidenceCount = harness?.missingEvidence.length ?? 0;
     const payload = {
@@ -144,11 +191,12 @@ async function main(argv: string[]): Promise<number> {
       counts: { error: errorCount, warning: warningCount, info: infoCount },
       files: results,
       compositions,
+      contracts,
       ...(harness !== undefined ? { harness } : {}),
     };
 
     process.stdout.write(
-      `${JSON.stringify(parsed.format === "sarif" ? toSarif(results, compositions, harness) : payload, null, 2)}\n`,
+      `${JSON.stringify(parsed.format === "sarif" ? toSarif(results, compositions, contracts, harness) : payload, null, 2)}\n`,
     );
     return errorCount === 0 && missingEvidenceCount === 0 ? 0 : 1;
   } finally {
@@ -159,6 +207,7 @@ async function main(argv: string[]): Promise<number> {
 function parseArgs(argv: string[]): CliOptions | { error: string } {
   const files: string[] = [];
   const compositions: string[] = [];
+  const contracts: string[] = [];
   let sourcePath = process.env.DS_MCP_SOURCE_PATH;
   let language: RuleLanguage | undefined;
   let rules: string[] = [];
@@ -196,6 +245,8 @@ function parseArgs(argv: string[]): CliOptions | { error: string } {
       mode = result.data;
     } else if (arg === "--composition") {
       compositions.push(readValue(argv, ++i, "--composition"));
+    } else if (arg === "--contract") {
+      contracts.push(readValue(argv, ++i, "--contract"));
     } else if (arg === "--help" || arg === "-h") {
       return { error: usage() };
     } else if (arg?.startsWith("--")) {
@@ -206,14 +257,17 @@ function parseArgs(argv: string[]): CliOptions | { error: string } {
   }
 
   if (!sourcePath) return { error: "missing --source or DS_MCP_SOURCE_PATH" };
-  if (files.length === 0 && compositions.length === 0) {
-    return { error: "missing file path(s) or --composition plan(s) to validate" };
+  if (files.length === 0 && compositions.length === 0 && contracts.length === 0) {
+    return {
+      error: "missing file path(s), --composition plan(s), or --contract evidence to validate",
+    };
   }
 
   return {
     sourcePath: path.resolve(sourcePath),
     files,
     compositions,
+    contracts,
     language,
     rules,
     format,
@@ -247,6 +301,13 @@ function inferLanguage(filePath: string): RuleLanguage {
       return "html";
     case ".vue":
       return "vue";
+    case ".swift":
+      return "swift";
+    case ".kt":
+    case ".kts":
+      return "kotlin";
+    case ".dart":
+      return "dart";
     default:
       return "tsx";
   }
@@ -254,7 +315,7 @@ function inferLanguage(filePath: string): RuleLanguage {
 
 function usage(): string {
   return [
-    "Usage: ds-mcp-validate --source <design-system-repo> [--language tsx] [--rules a,b] [--format json|sarif] [--mode validate|final_check] [--composition plan.json] <file...>",
+    "Usage: ds-mcp-validate --source <design-system-repo> [--language tsx] [--rules a,b] [--format json|sarif] [--mode validate|final_check] [--composition plan.json] [--contract handoff.json] <file...>",
     "",
     "Outputs JSON or SARIF. Exits 1 when any error-severity code/composition violation or harness-gate failure is found.",
   ].join("\n");
@@ -262,7 +323,7 @@ function usage(): string {
 
 function harnessGate(
   mode: HarnessMode,
-  counts: { files: number; compositions: number },
+  counts: { files: number; compositions: number; contracts: number },
 ): { mode: HarnessMode; missingEvidence: string[] } {
   const missingEvidence: string[] = [];
   if (["validate", "repair", "final_check"].includes(mode) && counts.files === 0) {
@@ -271,12 +332,16 @@ function harnessGate(
   if (["plan_only", "generate", "validate", "repair", "final_check"].includes(mode)) {
     if (counts.compositions === 0) missingEvidence.push("validate_composition");
   }
+  if (mode === "final_check" && counts.contracts === 0) {
+    missingEvidence.push("validate_design_contract");
+  }
   return { mode, missingEvidence };
 }
 
 function toSarif(
   results: FileResult[],
   compositions: CompositionResult[],
+  contracts: ContractResult[],
   harness?: { mode: HarnessMode; missingEvidence: string[] } | undefined,
 ): Record<string, unknown> {
   const rules = new Map<string, { id: string; shortDescription: { text: string } }>();
@@ -340,6 +405,36 @@ function toSarif(
           entityId: violation.entityId,
           path: violation.path,
           suggestion: violation.suggestion,
+        },
+      });
+    }
+  }
+
+  for (const file of contracts) {
+    for (const violation of file.violations) {
+      const ruleId = `contract/${violation.ruleId}`;
+      rules.set(ruleId, {
+        id: ruleId,
+        shortDescription: { text: violation.message },
+      });
+      sarifResults.push({
+        ruleId,
+        level: sarifLevel(violation.severity),
+        message: { text: violation.message },
+        locations: [
+          {
+            physicalLocation: {
+              artifactLocation: { uri: file.path },
+              region: { startLine: 1, startColumn: 1 },
+            },
+          },
+        ],
+        properties: {
+          kind: "contract",
+          severity: violation.severity,
+          path: violation.path,
+          suggestion: violation.suggestion,
+          sourceEntity: violation.sourceEntity,
         },
       });
     }

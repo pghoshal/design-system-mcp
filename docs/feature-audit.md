@@ -522,24 +522,27 @@ Important boundary: an arbitrary MCP client can still ignore a resource contract
 
 **Tally:** 24 ✅ · 0 🟡 · 0 ❌ (out of 24).
 
-The original 24 advanced-feature gaps are now closed at the server/CLI-contract level. Remaining work is future depth, not missing baseline functionality:
+The original 24 advanced-feature gaps are now closed at the server/CLI-contract level. The later ecosystem audit items have also been promoted from notes into enforceable hooks:
 
-- **Deeper AST adapters** (21 follow-up depth) — className/token usage and plugin escape hatch are still future work.
-- **Persisted harness sessions** (24 follow-up depth) — clients can store and validate step-by-step workflow history if they need IDE-native state-machine blocking beyond the CLI final gate.
+- `final_check` now requires `validate_composition`, `validate_ui`, and `validate_design_contract` evidence.
+- `pnpm validate` accepts `--contract handoff.json`, includes contract violations in JSON/SARIF, and fails on contract errors.
+- `resolve_token` supports Flutter output through `platform: "flutter"`.
+- `get_component_source` has per-file, max-file, and max-total-byte caps.
+- `validate_design_contract` checks peer dependency evidence and visual diff thresholds in addition to dimensions/hash.
+- Native rule languages can be declared for Swift, Kotlin, and Dart regex rules.
 
-The remaining opportunities are depth expansions, not yellow audit gaps. Rules can be added incrementally (each is ~20-40 LOC), and schema fields can be extended as teams formalize more design-system knowledge.
+The remaining opportunities are depth expansions, not yellow audit gaps. Rules can be added incrementally, and schema fields can be extended as teams formalize more design-system knowledge.
 
 Suggested future depth:
 
 | Promote | Approach |
 |---|---|
-| #4 Accessibility → dialog / contrast | Add dialog focus/escape and token-based contrast rules to `accessibility.ts` |
-| #5 Tokens → category enforcement | Add a rule keyed off the token's `$type` field |
-| #7 Pattern contract → +copy + interaction | Extend `PatternContractSchema` with `copyRules: string[]`, `interactionRules: string[]` |
+| Accessibility → dialog behavior | Add dialog focus/escape rules to `accessibility.ts` |
+| Tokens → category enforcement | Add a rule keyed off the token's `$type` field |
+| Pattern contract → copy + interaction | Extend `PatternContractSchema` with `copyRules: string[]`, `interactionRules: string[]` |
+| Figma import → direct adapter | Add an external CLI/importer that writes `handoff.json`; keep MCP server read-only |
+| Visual regression → screenshot producer | Add a harness adapter that captures screenshots and writes `diffPixels` / `diffRatio` evidence |
 
-Potential future depth in priority order:
-
-1. **#5 Semantic token category enforcement** — detect color tokens in spacing/layout slots and spacing tokens in color slots.
-2. **#21 Deeper AST adapters** — add className/token usage and optional safe plugin detector kinds.
+MCP remains intentionally read-only and single-instance. Direct Figma API access, screenshot capture, and IDE-native state-machine blocking belong in adapters/harnesses that produce evidence consumed by the server and CLI.
 
 Each is a discrete slice that fits a TDD-RED→GREEN→Critic cycle.

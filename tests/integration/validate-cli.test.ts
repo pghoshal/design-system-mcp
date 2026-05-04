@@ -234,9 +234,28 @@ describe("validate CLI", () => {
     });
   });
 
-  it("final_check mode passes with clean code and composition evidence", async () => {
+  it("validates design contract evidence in CI", async () => {
+    const contract = path.join(tmpDir, "handoff.json");
+    await fs.writeFile(
+      contract,
+      JSON.stringify({
+        contrastPairs: [{ foreground: "#fff", background: "#fff", minimumRatio: 4.5 }],
+      }),
+      "utf8",
+    );
+
+    await expect(
+      execFileAsync(TSX_BIN, [ENTRY, "--source", FIXTURE, "--contract", contract]),
+    ).rejects.toMatchObject({
+      code: 1,
+      stdout: expect.stringContaining('"ruleId": "contrast-ratio-too-low"'),
+    });
+  });
+
+  it("final_check mode passes with clean code, composition evidence, and contract evidence", async () => {
     const file = path.join(tmpDir, "clean.tsx");
     const plan = path.join(tmpDir, "composition.json");
+    const contract = path.join(tmpDir, "handoff.json");
     await fs.writeFile(file, "const color = 'var(--color-action-primary)';\n", "utf8");
     await fs.writeFile(
       plan,
@@ -256,6 +275,33 @@ describe("validate CLI", () => {
       }),
       "utf8",
     );
+    await fs.writeFile(
+      contract,
+      JSON.stringify({
+        contrastPairs: [
+          {
+            foreground: "token:color.text.primary",
+            background: "token:color.surface.default",
+            minimumRatio: 4.5,
+          },
+        ],
+        packages: [
+          {
+            component: "component:button",
+            package: "@acme/ui",
+            version: "2.2.0",
+            peerDependencies: { react: "18.2.0" },
+          },
+        ],
+        externalDesignImport: {
+          source: "figma",
+          mappedTokens: ["token:color.action.primary"],
+          mappedComponents: ["component:button"],
+          unmappedItems: [],
+        },
+      }),
+      "utf8",
+    );
 
     const { stdout } = await execFileAsync(TSX_BIN, [
       ENTRY,
@@ -267,6 +313,8 @@ describe("validate CLI", () => {
       "json",
       "--composition",
       plan,
+      "--contract",
+      contract,
       file,
     ]);
 

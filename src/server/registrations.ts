@@ -31,7 +31,7 @@ const WORKFLOW_CONTRACT = {
     },
     {
       name: "final_check",
-      requiredEvidence: ["validate_composition", "validate_ui"],
+      requiredEvidence: ["validate_composition", "validate_ui", "validate_design_contract"],
       exitCriteria: "No error-severity violations and no missing harness evidence remain.",
     },
   ],
@@ -55,9 +55,9 @@ const WORKFLOW_CONTRACT = {
   ],
   finalGate: {
     mode: "final_check",
-    requiredTools: ["validate_composition", "validate_ui"],
-    requiredEvidence: ["validate_composition", "validate_ui"],
-    cli: "pnpm validate -- --source <design-system-repo> --mode final_check --composition composition.json <file...>",
+    requiredTools: ["validate_composition", "validate_ui", "validate_design_contract"],
+    requiredEvidence: ["validate_composition", "validate_ui", "validate_design_contract"],
+    cli: "pnpm validate -- --source <design-system-repo> --mode final_check --composition composition.json --contract handoff.json <file...>",
     requiredOutcome:
       "No error-severity violations and no missing required evidence may remain before generated UI is accepted.",
   },
@@ -70,6 +70,7 @@ const WORKFLOW_CONTRACT = {
   ci: {
     code: "pnpm validate -- --source <design-system-repo> --format sarif <file...>",
     composition: "pnpm validate -- --source <design-system-repo> --composition composition.json",
+    contract: "pnpm validate -- --source <design-system-repo> --contract handoff.json",
   },
 } as const;
 

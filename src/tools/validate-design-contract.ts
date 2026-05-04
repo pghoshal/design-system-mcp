@@ -37,6 +37,7 @@ const PackageSchema = z.object({
   package: z.string().min(1),
   version: z.string().optional(),
   component: z.string().min(1).optional(),
+  peerDependencies: z.record(z.string()).default({}),
 });
 
 const PlatformUsageSchema = z.object({
@@ -67,6 +68,10 @@ const VisualRegressionSchema = z.object({
   }),
   maxDimensionDelta: z.number().int().min(0).default(0),
   requireHashMatch: z.boolean().default(false),
+  diffPixels: z.number().int().min(0).optional(),
+  maxDiffPixels: z.number().int().min(0).optional(),
+  diffRatio: z.number().min(0).max(1).optional(),
+  maxDiffRatio: z.number().min(0).max(1).optional(),
 });
 
 const ExternalDesignImportSchema = z.object({
@@ -271,6 +276,29 @@ function validatePackages(
         message: `${pkg.package}@${pkg.version} does not satisfy declared ${dep.version}.`,
       });
     }
+    const peerDeps = deps.filter(
+      (entry): entry is { package?: string; version?: string; type?: string } =>
+        isRecord(entry) && entry.type === "peer",
+    );
+    for (const peer of peerDeps) {
+      if (!peer.package || !peer.version) continue;
+      const actualPeer = pkg.peerDependencies[peer.package];
+      if (!actualPeer) {
+        out.push({
+          ruleId: "package-peer-missing",
+          severity: "error",
+          path: "packages.peerDependencies",
+          message: `${pkg.component} requires peer ${peer.package}@${peer.version}.`,
+        });
+      } else if (!versionSatisfies(actualPeer, peer.version)) {
+        out.push({
+          ruleId: "package-peer-version-mismatch",
+          severity: "error",
+          path: "packages.peerDependencies",
+          message: `${peer.package}@${actualPeer} does not satisfy declared peer ${peer.version}.`,
+        });
+      }
+    }
   }
   return out;
 }
@@ -347,6 +375,30 @@ function validateVisualRegression(
       severity: "error",
       path: "visualRegression.current.hash",
       message: "Current visual hash does not match the baseline hash.",
+    });
+  }
+  if (
+    visual.diffPixels !== undefined &&
+    visual.maxDiffPixels !== undefined &&
+    visual.diffPixels > visual.maxDiffPixels
+  ) {
+    out.push({
+      ruleId: "visual-diff-pixels-too-high",
+      severity: "error",
+      path: "visualRegression.diffPixels",
+      message: `Visual diff has ${visual.diffPixels} changed pixels; maximum is ${visual.maxDiffPixels}.`,
+    });
+  }
+  if (
+    visual.diffRatio !== undefined &&
+    visual.maxDiffRatio !== undefined &&
+    visual.diffRatio > visual.maxDiffRatio
+  ) {
+    out.push({
+      ruleId: "visual-diff-ratio-too-high",
+      severity: "error",
+      path: "visualRegression.diffRatio",
+      message: `Visual diff ratio ${visual.diffRatio} exceeds maximum ${visual.maxDiffRatio}.`,
     });
   }
   return out;

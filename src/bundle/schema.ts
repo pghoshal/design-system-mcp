@@ -373,6 +373,9 @@ export const RuleLanguageSchema = z.enum([
   "html",
   "vue",
   "react-native",
+  "swift",
+  "kotlin",
+  "dart",
 ]);
 
 export const RegexDetectorSchema = z.object({

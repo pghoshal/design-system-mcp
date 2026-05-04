@@ -52,5 +52,16 @@ describe("get_component_source", () => {
   it("truncates large files according to the requested byte limit", async () => {
     const result = await handler.handle({ id: "component:card", maxBytesPerFile: 512 }, ctx());
     expect(result.files.every((file) => file.content.length <= 512)).toBe(true);
+    expect(result.totalBytes).toBeGreaterThan(0);
+  });
+
+  it("caps total files and total returned bytes", async () => {
+    const result = await handler.handle(
+      { id: "component:card", maxFiles: 1, maxTotalBytes: 512 },
+      ctx(),
+    );
+    expect(result.files).toHaveLength(1);
+    expect(result.totalBytes).toBeLessThanOrEqual(512);
+    expect(result.truncated).toBe(true);
   });
 });

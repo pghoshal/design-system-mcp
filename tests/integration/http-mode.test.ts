@@ -273,7 +273,7 @@ describe("Phase 2 — HTTP transport", () => {
       expect(workflowJson.modes).toContainEqual(
         expect.objectContaining({
           name: "final_check",
-          requiredEvidence: ["validate_composition", "validate_ui"],
+          requiredEvidence: ["validate_composition", "validate_ui", "validate_design_contract"],
         }),
       );
       expect(workflowJson.stateMachine).toContainEqual({ from: "validate", to: "final_check" });
@@ -285,8 +285,10 @@ describe("Phase 2 — HTTP transport", () => {
       expect(workflowJson.finalGate.requiredEvidence).toEqual([
         "validate_composition",
         "validate_ui",
+        "validate_design_contract",
       ]);
       expect(workflowJson.finalGate.cli).toContain("--mode final_check");
+      expect(workflowJson.finalGate.cli).toContain("--contract");
       expect(workflowJson.finalGate.requiredOutcome).toContain("no missing required evidence");
 
       const entity = await client.readResource({ uri: "design://entity/principle:clarity" });

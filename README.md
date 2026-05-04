@@ -734,7 +734,7 @@ For best UX-to-dev consistency, agents and CI should follow this sequence:
 8. Generate code by composing/importing returned components rather than recreating them.
 9. Call `validate_ui` and apply deterministic `repair` / `replaceWith` edits first.
 10. Call `validate_design_contract` for handoff evidence that is not visible in a code snippet, such as contrast pairs, chart summaries, package versions, platform mappings, visual baselines, and Figma/Markdown/token import coverage.
-11. In CI or final harness mode, run `pnpm validate -- --mode final_check --composition composition.json <file...>` and keep the `validate_design_contract` result as additional harness evidence.
+11. In CI or final harness mode, run `pnpm validate -- --mode final_check --composition composition.json --contract handoff.json <file...>`. The final gate requires UI, composition, and design-contract evidence.
 
 The server publishes the workflow contract at `design://workflow`; hard blocking is enforced by the validation CLI and by any client harness that honors that resource.
 
@@ -755,7 +755,9 @@ Example `get_component_source` request:
   "id": "component:button",
   "includeStories": true,
   "includeTests": false,
-  "maxBytesPerFile": 30000
+  "maxBytesPerFile": 30000,
+  "maxFiles": 50,
+  "maxTotalBytes": 200000
 }
 ```
 
@@ -781,6 +783,8 @@ Example `get_component_source` response shape:
       "content": "..."
     }
   ],
+  "totalBytes": 1920,
+  "truncated": false,
   "bundleVersion": "nogit-2026-05-05T12:00:00.000Z"
 }
 ```
@@ -810,7 +814,10 @@ Example `validate_design_contract` request:
     {
       "component": "component:button",
       "package": "@acme/ui",
-      "version": "2.2.0"
+      "version": "2.2.0",
+      "peerDependencies": {
+        "react": "18.2.0"
+      }
     }
   ],
   "platformUsage": {
@@ -827,7 +834,11 @@ Example `validate_design_contract` request:
   "visualRegression": {
     "baseline": { "width": 1440, "height": 900, "hash": "risk-dashboard-v1" },
     "current": { "width": 1440, "height": 900, "hash": "risk-dashboard-v1" },
-    "requireHashMatch": true
+    "requireHashMatch": true,
+    "diffPixels": 0,
+    "maxDiffPixels": 25,
+    "diffRatio": 0,
+    "maxDiffRatio": 0.001
   },
   "externalDesignImport": {
     "source": "figma",
@@ -838,7 +849,7 @@ Example `validate_design_contract` request:
 }
 ```
 
-`validate_design_contract` returns `ok: false` when it finds error-severity handoff gaps such as unresolved or low-contrast color pairs, non-`token:dataviz.*` chart colors, missing chart summaries, raw layout values, undeclared package dependencies, platform package/import mismatches, visual baseline changes, or unmapped Figma/Sketch/Markdown/token import items.
+`validate_design_contract` returns `ok: false` when it finds error-severity handoff gaps such as unresolved or low-contrast color pairs, non-`token:dataviz.*` chart colors, missing chart summaries, raw layout values, undeclared package dependencies, missing or incompatible peer dependencies, platform package/import mismatches, visual baseline/diff changes, or unmapped Figma/Sketch/Markdown/token import items.
 
 `validate_ui` also runs built-in semantic token, accessibility, and copy/voice checks:
 
@@ -944,10 +955,11 @@ Validate changed UI files against a local design-system source repo in CI:
 pnpm validate -- --source ./path/to/design-system src/App.tsx
 pnpm validate -- --source ./path/to/design-system --format sarif src/App.tsx > ds-results.sarif
 pnpm validate -- --source ./path/to/design-system --composition composition.json
-pnpm validate -- --source ./path/to/design-system --mode final_check --composition composition.json src/App.tsx
+pnpm validate -- --source ./path/to/design-system --contract handoff.json
+pnpm validate -- --source ./path/to/design-system --mode final_check --composition composition.json --contract handoff.json src/App.tsx
 ```
 
-The command prints JSON or SARIF and exits `1` if any error-severity `validate_ui` / `validate_composition` violation is found. In `--mode final_check`, it also exits `1` when required harness evidence is missing, such as running UI validation without a composition plan.
+The command prints JSON or SARIF and exits `1` if any error-severity `validate_ui`, `validate_composition`, or `validate_design_contract` violation is found. In `--mode final_check`, it also exits `1` when required harness evidence is missing, such as running UI validation without a composition plan or handoff contract evidence.
 
 This project follows test-first development for non-trivial changes. Add focused tests first, implement the smallest safe change, then run the relevant verification before committing.
 

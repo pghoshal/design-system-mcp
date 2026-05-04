@@ -256,7 +256,7 @@ Once connected, the agent has access to:
 | `get_entity` | Fetch one entity by id (`token:color.action.primary`, `principle:clarity`, etc.) |
 | `list_entities` | Browse the catalog filtered by type or tag |
 | `get_related` | Walk one hop in the relation graph |
-| `resolve_token` | Find tokens by partial name; format for `css`/`ios`/`android`/`react-native`/`raw` |
+| `resolve_token` | Find tokens by partial name; format for `css`/`ios`/`android`/`react-native`/`flutter`/`raw` |
 | `validate_ui` | Run the loaded validation rules against a snippet of generated code |
 | `get_usage` | Canonical import path + props + examples + constraints for a component |
 | `get_component_source` | Existing component implementation files for reuse instead of rewrite |

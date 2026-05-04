@@ -4,7 +4,7 @@ import { cssTokenVar } from "../util/css-token-name.js";
 
 export const ResolveTokenInput = z.object({
   query: z.string().min(1).max(256),
-  platform: z.enum(["raw", "css", "ios", "android", "react-native"]).default("raw"),
+  platform: z.enum(["raw", "css", "ios", "android", "react-native", "flutter"]).default("raw"),
   limit: z.number().int().min(1).max(50).default(10),
 });
 
@@ -82,7 +82,7 @@ function formatForPlatform(
   _name: string,
   pathArr: string[],
   rawValue: string,
-  platform: "raw" | "css" | "ios" | "android" | "react-native",
+  platform: "raw" | "css" | "ios" | "android" | "react-native" | "flutter",
 ): string {
   switch (platform) {
     case "raw":
@@ -95,5 +95,15 @@ function formatForPlatform(
       return `@${pathArr.join("_")}`;
     case "react-native":
       return `tokens.${pathArr.join(".")}`;
+    case "flutter":
+      return `AtlasTokens.${pathArr.map(toDartIdentifierPart).join(".")}`;
   }
+}
+
+function toDartIdentifierPart(part: string): string {
+  return part
+    .replace(/[^A-Za-z0-9_]+(.)?/g, (_match, next: string | undefined) =>
+      next ? next.toUpperCase() : "",
+    )
+    .replace(/^[0-9]/, "_$&");
 }

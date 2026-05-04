@@ -166,7 +166,7 @@ describe("Phase 4 — stdio transport", () => {
     expect(workflowJson.modes).toContainEqual(
       expect.objectContaining({
         name: "final_check",
-        requiredEvidence: ["validate_composition", "validate_ui"],
+        requiredEvidence: ["validate_composition", "validate_ui", "validate_design_contract"],
       }),
     );
     expect(workflowJson.finalGate.mode).toBe("final_check");
@@ -174,6 +174,7 @@ describe("Phase 4 — stdio transport", () => {
     expect(workflowJson.requiredSequence).toContain("validate_design_contract");
     expect(workflowJson.finalGate.requiredTools).toContain("validate_composition");
     expect(workflowJson.finalGate.requiredEvidence).toContain("validate_ui");
+    expect(workflowJson.finalGate.requiredEvidence).toContain("validate_design_contract");
   });
 
   it("prompts/list and prompts/get work over stdio", async () => {

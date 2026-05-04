@@ -210,7 +210,18 @@ export interface PatternContract {
 }
 
 export type RuleSeverity = "error" | "warning" | "info";
-export type RuleLanguage = "tsx" | "jsx" | "ts" | "js" | "css" | "html" | "vue" | "react-native";
+export type RuleLanguage =
+  | "tsx"
+  | "jsx"
+  | "ts"
+  | "js"
+  | "css"
+  | "html"
+  | "vue"
+  | "react-native"
+  | "swift"
+  | "kotlin"
+  | "dart";
 
 export interface RegexDetector {
   type: "regex";
