@@ -24,6 +24,62 @@
     "sideEffects": [],
     "notes": ["Import Button from @acme/ui/button; do not deep-import internal files."]
   },
+  "platforms": [
+    {
+      "platform": "web",
+      "package": "@acme/ui",
+      "importPath": "@acme/ui/button",
+      "component": "Button",
+      "tokens": {
+        "background": "token:color.action.primary"
+      },
+      "props": {
+        "variant": "primary"
+      },
+      "notes": ["Generic web mapping."]
+    },
+    {
+      "platform": "web",
+      "framework": "react",
+      "package": "@acme/react-ui",
+      "importPath": "@acme/react-ui/button",
+      "component": "Button",
+      "tokens": {
+        "background": "token:color.action.primary"
+      },
+      "props": {
+        "variant": "primary"
+      },
+      "notes": ["Prefer the React-specific Button mapping when framework=react."]
+    },
+    {
+      "platform": "react-native",
+      "framework": "react-native",
+      "package": "@acme/react-native-ui",
+      "importPath": "@acme/react-native-ui/button",
+      "component": "Button",
+      "tokens": {
+        "background": "token:color.action.primary"
+      },
+      "props": {
+        "variant": "primary"
+      },
+      "notes": ["Use the existing native Button instead of recreating it."]
+    },
+    {
+      "platform": "flutter",
+      "framework": "flutter",
+      "package": "acme_ui",
+      "component": "AcmeButton",
+      "tokens": {
+        "background": "token:color.action.primary"
+      },
+      "props": {
+        "variant": "primary"
+      },
+      "notes": ["Use AcmeButton; do not hand-build a replacement."]
+    }
+  ],
   "status": "stable",
   "tags": ["action", "form", "confirmation"],
   "props": [

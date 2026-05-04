@@ -279,6 +279,12 @@ function tokenAllowedForPlatform(entity: Entity, platform: string | undefined): 
   if (normalized === "web") return entity.id.startsWith("token:platform.web.");
   if (normalized === "ios") return entity.id.startsWith("token:platform.ios.");
   if (normalized === "android") return entity.id.startsWith("token:platform.android.");
-  if (normalized === "react-native") return entity.id.startsWith("token:platform.react-native.");
+  if (normalized === "react-native" || normalized === "reactnative") {
+    return (
+      entity.id.startsWith("token:platform.react-native.") ||
+      entity.id.startsWith("token:platform.reactNative.")
+    );
+  }
+  if (normalized === "flutter") return entity.id.startsWith("token:platform.flutter.");
   return true;
 }

@@ -15,6 +15,17 @@ const UsageExampleOutputSchema = z.object({
   description: z.string().optional(),
 });
 
+const PlatformUsageOutputSchema = z.object({
+  platform: z.string(),
+  framework: z.string().optional(),
+  package: z.string().optional(),
+  importPath: z.string().optional(),
+  component: z.string().optional(),
+  tokens: z.record(z.string()),
+  props: z.record(z.union([z.string(), z.number(), z.boolean()])),
+  notes: z.array(z.string()),
+});
+
 const ConstraintOutputSchema = z.object({
   id: z.string(),
   severity: z.enum(["error", "warning", "info"]),
@@ -40,6 +51,8 @@ const ImportGuidanceOutputSchema = z.object({
 export const GetUsageInput = z.object({
   id: z.string().min(1).max(256),
   language: z.string().min(1).max(32).optional(),
+  platform: z.string().min(1).max(64).optional(),
+  framework: z.string().min(1).max(64).optional(),
   include_constraints: z.boolean().default(true),
 });
 
@@ -52,6 +65,8 @@ export const GetUsageOutput = z.object({
   props: z.array(z.record(z.unknown())).optional(),
   dependencies: z.array(ComponentDependencyOutputSchema).optional(),
   importGuidance: ImportGuidanceOutputSchema.optional(),
+  platformUsage: PlatformUsageOutputSchema.optional(),
+  platformMappings: z.array(PlatformUsageOutputSchema).optional(),
   examples: z.array(UsageExampleOutputSchema),
   constraints: z.array(ConstraintOutputSchema),
   bundleVersion: z.string(),
@@ -73,16 +88,20 @@ export const handler: ToolHandler<typeof GetUsageInput, typeof GetUsageOutput> =
       (ex) => !args.language || ex.language === args.language,
     );
     const constraints = args.include_constraints ? readConstraints(data) : [];
+    const platformMappings = readPlatformMappings(data);
+    const platformUsage = selectPlatformUsage(platformMappings, args.platform, args.framework);
 
     return {
       id: entity.id,
       type: entity.type,
       summary: entity.summary,
-      importPath: readString(data, "importPath"),
-      package: readString(data, "package"),
+      importPath: readImportPath(data, platformUsage, args.platform),
+      package: readPackage(data, platformUsage, args.platform),
       props: readArrayOfRecords(data, "props"),
       dependencies: readDependencies(data),
       importGuidance: readImportGuidance(data),
+      platformUsage,
+      platformMappings,
       examples,
       constraints,
       bundleVersion: bundle.version,
@@ -109,6 +128,65 @@ function readImportGuidance(data: Record<string, unknown>): ImportGuidance | und
 function readExamples(data: Record<string, unknown>): UsageExample[] {
   const value = data.examples;
   return Array.isArray(value) ? (value as UsageExample[]) : [];
+}
+
+function readPlatformMappings(data: Record<string, unknown>): z.infer<
+  typeof PlatformUsageOutputSchema
+>[] {
+  const value = data.platforms;
+  if (!Array.isArray(value)) return [];
+  return value.filter(isPlatformMapping) as z.infer<typeof PlatformUsageOutputSchema>[];
+}
+
+function selectPlatformUsage(
+  mappings: z.infer<typeof PlatformUsageOutputSchema>[],
+  platform: string | undefined,
+  framework: string | undefined,
+): z.infer<typeof PlatformUsageOutputSchema> | undefined {
+  if (!platform) return undefined;
+  const normalizedPlatform = normalizePlatform(platform);
+  const normalizedFramework = framework ? normalizePlatform(framework) : undefined;
+  const platformMatches = mappings.filter(
+    (mapping) => normalizePlatform(mapping.platform) === normalizedPlatform,
+  );
+  if (!normalizedFramework) return platformMatches[0];
+
+  const exactFramework = platformMatches.find(
+    (mapping) => mapping.framework && normalizePlatform(mapping.framework) === normalizedFramework,
+  );
+  if (exactFramework) return exactFramework;
+
+  return platformMatches.find((mapping) => !mapping.framework);
+}
+
+function readImportPath(
+  data: Record<string, unknown>,
+  platformUsage: z.infer<typeof PlatformUsageOutputSchema> | undefined,
+  requestedPlatform: string | undefined,
+): string | undefined {
+  if (platformUsage) return platformUsage.importPath;
+  if (requestedPlatform) return undefined;
+  return readString(data, "importPath");
+}
+
+function readPackage(
+  data: Record<string, unknown>,
+  platformUsage: z.infer<typeof PlatformUsageOutputSchema> | undefined,
+  requestedPlatform: string | undefined,
+): string | undefined {
+  if (platformUsage) return platformUsage.package;
+  if (requestedPlatform) return undefined;
+  return readString(data, "package");
+}
+
+function normalizePlatform(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function isPlatformMapping(value: unknown): value is z.infer<typeof PlatformUsageOutputSchema> {
+  if (!value || typeof value !== "object") return false;
+  const mapping = value as Record<string, unknown>;
+  return typeof mapping.platform === "string";
 }
 
 function readConstraints(data: Record<string, unknown>): DesignConstraint[] {
