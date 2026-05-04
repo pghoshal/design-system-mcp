@@ -259,8 +259,10 @@ Once connected, the agent has access to:
 | `resolve_token` | Find tokens by partial name; format for `css`/`ios`/`android`/`react-native`/`raw` |
 | `validate_ui` | Run the loaded validation rules against a snippet of generated code |
 | `get_usage` | Canonical import path + props + examples + constraints for a component |
+| `get_component_source` | Existing component implementation files for reuse instead of rewrite |
 | `recommend_composition` | Implementation brief: components + tokens + principles for an intent |
 | `validate_composition` | Check a candidate component composition against a pattern's contract |
+| `validate_design_contract` | Structured handoff checks for contrast, charts, layout, package versions, platform mappings, visual baselines, and imported design-file coverage |
 | `inspect_coverage` | Bundle-side diagnostics — what's missing or inconsistent |
 
 Plus MCP **resources** (`design://manifest`, `design://schema`, `design://entity/{id}`, `design://principle/{id}`, `design://pattern/{id}`, `design://component/{id}`, `design://prompt/{name}`) and any **prompts** the source repo declares under `prompts/*.prompt.md`.

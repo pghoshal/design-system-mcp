@@ -23,6 +23,10 @@
     "surface": {
       "default": { "$value": "{color.neutral.0}", "$type": "color" },
       "inverse": { "$value": "{color.neutral.900}", "$type": "color" }
+    },
+    "text": {
+      "primary": { "$value": "{color.neutral.900}", "$type": "color" },
+      "inverse": { "$value": "{color.neutral.0}", "$type": "color" }
     }
   }
 }

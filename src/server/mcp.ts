@@ -3,6 +3,7 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { ZodTypeAny } from "zod";
 import { handler as describeSchemaHandler } from "../tools/describe-schema.js";
 import { handler as explainDecisionHandler } from "../tools/explain-decision.js";
+import { handler as getComponentSourceHandler } from "../tools/get-component-source.js";
 import { handler as getEntityHandler } from "../tools/get-entity.js";
 import { handler as getRelatedHandler } from "../tools/get-related.js";
 import { handler as getUsageHandler } from "../tools/get-usage.js";
@@ -12,6 +13,7 @@ import { handler as recommendCompositionHandler } from "../tools/recommend-compo
 import { handler as resolveTokenHandler } from "../tools/resolve-token.js";
 import { handler as searchHandler } from "../tools/search-design-system.js";
 import { handler as validateCompositionHandler } from "../tools/validate-composition.js";
+import { handler as validateDesignContractHandler } from "../tools/validate-design-contract.js";
 import { handler as validateUiHandler } from "../tools/validate-ui.js";
 import { ToolError } from "../util/errors.js";
 import { newRequestId } from "../util/ids.js";
@@ -33,8 +35,10 @@ const TOOLS: ReadonlyArray<ToolHandler<any, any>> = [
   resolveTokenHandler,
   validateUiHandler,
   getUsageHandler,
+  getComponentSourceHandler,
   recommendCompositionHandler,
   validateCompositionHandler,
+  validateDesignContractHandler,
   inspectCoverageHandler,
   explainDecisionHandler,
 ];

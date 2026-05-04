@@ -12,12 +12,24 @@
       "900": { "$value": "#0F172A", "$type": "color" }
     }
   },
+  "space": {
+    "4": { "$value": "16px", "$type": "dimension" }
+  },
   "spacing": {
     "xs": { "$value": "4px", "$type": "dimension" },
     "sm": { "$value": "8px", "$type": "dimension" },
     "md": { "$value": "16px", "$type": "dimension" },
     "lg": { "$value": "24px", "$type": "dimension" },
     "xl": { "$value": "32px", "$type": "dimension" }
+  },
+  "dataviz": {
+    "risk": {
+      "high": {
+        "$value": "{color.red.500}",
+        "$type": "color",
+        "$description": "High risk series color"
+      }
+    }
   },
   "font": {
     "family": {

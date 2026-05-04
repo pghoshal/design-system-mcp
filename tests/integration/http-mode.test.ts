@@ -131,8 +131,10 @@ describe("Phase 2 — HTTP transport", () => {
       expect(names).toContain("get_related");
       expect(names).toContain("validate_ui");
       expect(names).toContain("get_usage");
+      expect(names).toContain("get_component_source");
       expect(names).toContain("recommend_composition");
       expect(names).toContain("validate_composition");
+      expect(names).toContain("validate_design_contract");
       expect(names).toContain("inspect_coverage");
       expect(names).toContain("explain_decision");
 
@@ -276,6 +278,8 @@ describe("Phase 2 — HTTP transport", () => {
       );
       expect(workflowJson.stateMachine).toContainEqual({ from: "validate", to: "final_check" });
       expect(workflowJson.requiredSequence).toContain("recommend_composition");
+      expect(workflowJson.requiredSequence).toContain("get_component_source");
+      expect(workflowJson.requiredSequence).toContain("validate_design_contract");
       expect(workflowJson.finalGate.mode).toBe("final_check");
       expect(workflowJson.finalGate.requiredTools).toContain("validate_ui");
       expect(workflowJson.finalGate.requiredEvidence).toEqual([

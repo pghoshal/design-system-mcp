@@ -130,9 +130,9 @@ function readExamples(data: Record<string, unknown>): UsageExample[] {
   return Array.isArray(value) ? (value as UsageExample[]) : [];
 }
 
-function readPlatformMappings(data: Record<string, unknown>): z.infer<
-  typeof PlatformUsageOutputSchema
->[] {
+function readPlatformMappings(
+  data: Record<string, unknown>,
+): z.infer<typeof PlatformUsageOutputSchema>[] {
   const value = data.platforms;
   if (!Array.isArray(value)) return [];
   return value.filter(isPlatformMapping) as z.infer<typeof PlatformUsageOutputSchema>[];

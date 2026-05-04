@@ -658,8 +658,10 @@ The server exposes generic verbs:
 | `resolve_token` | Find tokens and return platform-formatted values |
 | `validate_ui` | Validate generated code against source-repo rules |
 | `get_usage` | Return canonical imports, examples, props, and constraints |
+| `get_component_source` | Return existing implementation files so agents reuse shipped components instead of rewriting them |
 | `recommend_composition` | Return an implementation brief for a UI intent |
 | `validate_composition` | Validate planned components, props, patterns, and tokens before coding |
+| `validate_design_contract` | Validate structured handoff evidence: contrast, chart summaries, layout tokens, package versions, platform mappings, visual baselines, and imported design-file mappings |
 | `inspect_coverage` | Report content coverage gaps before deterministic generation |
 | `explain_decision` | Explain a chosen entity with deterministic source, relation, and constraint evidence |
 
@@ -671,11 +673,13 @@ For best UX-to-dev consistency, agents and CI should follow this sequence:
 2. Call `inspect_coverage` to understand whether the source is enterprise-complete or token-only/community-grade.
 3. Call `recommend_composition` with the UI intent.
 4. Call `explain_decision` for selected components, patterns, or tokens when the harness needs auditable reasoning.
-5. Call `get_usage` for selected components and `resolve_token` for every concrete token value.
-6. Call `validate_composition` before generating code.
-7. Generate code.
-8. Call `validate_ui` and apply deterministic `repair` / `replaceWith` edits first.
-9. In CI or final harness mode, run `pnpm validate -- --mode final_check --composition composition.json <file...>`.
+5. Call `get_usage` for selected components and `get_component_source` when implementation already exists.
+6. Call `resolve_token` for every concrete token value.
+7. Call `validate_composition` before generating code.
+8. Generate code by composing/importing returned components rather than recreating them.
+9. Call `validate_ui` and apply deterministic `repair` / `replaceWith` edits first.
+10. Call `validate_design_contract` for handoff evidence that is not visible in a code snippet, such as contrast pairs, chart summaries, package versions, platform mappings, visual baselines, and Figma/Markdown/token import coverage.
+11. In CI or final harness mode, run `pnpm validate -- --mode final_check --composition composition.json <file...>` and keep the `validate_design_contract` result as additional harness evidence.
 
 The server publishes the workflow contract at `design://workflow`; hard blocking is enforced by the validation CLI and by any client harness that honors that resource.
 

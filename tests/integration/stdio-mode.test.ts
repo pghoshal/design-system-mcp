@@ -107,8 +107,10 @@ describe("Phase 4 — stdio transport", () => {
       "resolve_token",
       "validate_ui",
       "get_usage",
+      "get_component_source",
       "recommend_composition",
       "validate_composition",
+      "validate_design_contract",
       "inspect_coverage",
       "explain_decision",
     ]) {
@@ -158,6 +160,7 @@ describe("Phase 4 — stdio transport", () => {
       workflowBody && "text" in workflowBody ? (workflowBody.text as string) : "";
     const workflowJson = JSON.parse(workflowText) as {
       modes: Array<{ name: string; requiredEvidence: string[] }>;
+      requiredSequence: string[];
       finalGate: { mode: string; requiredTools: string[]; requiredEvidence: string[] };
     };
     expect(workflowJson.modes).toContainEqual(
@@ -167,6 +170,8 @@ describe("Phase 4 — stdio transport", () => {
       }),
     );
     expect(workflowJson.finalGate.mode).toBe("final_check");
+    expect(workflowJson.requiredSequence).toContain("get_component_source");
+    expect(workflowJson.requiredSequence).toContain("validate_design_contract");
     expect(workflowJson.finalGate.requiredTools).toContain("validate_composition");
     expect(workflowJson.finalGate.requiredEvidence).toContain("validate_ui");
   });

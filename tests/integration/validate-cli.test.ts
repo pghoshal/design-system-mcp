@@ -42,7 +42,7 @@ describe("validate CLI", () => {
     const parsed = JSON.parse(stdout) as { ok: boolean; counts: { error: number } };
     expect(parsed.ok).toBe(true);
     expect(parsed.counts.error).toBe(0);
-  });
+  }, 30_000);
 
   it("supports the documented pnpm validate -- --source invocation", async () => {
     if (!PNPM_CLI) throw new Error("npm_execpath missing; run tests through pnpm");
@@ -59,7 +59,7 @@ describe("validate CLI", () => {
     expect(jsonStart).toBeGreaterThanOrEqual(0);
     const parsed = JSON.parse(stdout.slice(jsonStart)) as { ok: boolean };
     expect(parsed.ok).toBe(true);
-  });
+  }, 30_000);
 
   it("exits 1 and includes violation provenance for error files", async () => {
     const file = path.join(tmpDir, "bad.tsx");

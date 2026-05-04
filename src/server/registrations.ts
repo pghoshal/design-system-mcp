@@ -47,8 +47,10 @@ const WORKFLOW_CONTRACT = {
     "search_design_system",
     "recommend_composition",
     "get_usage",
+    "get_component_source",
     "validate_composition",
     "validate_ui",
+    "validate_design_contract",
     "explain_decision",
   ],
   finalGate: {
