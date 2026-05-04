@@ -167,7 +167,12 @@ design-system/
     Button/
       component.json
       Button.tsx
+      Button.native.tsx
       Button.stories.tsx
+      AtlasButton.swift
+      AtlasButton.kt
+      atlas_button.dart
+      button.css
   prompts/
     build_with_design_system.prompt.md
   rules/
@@ -384,6 +389,8 @@ Build a {{component_type}} using the design system.
 
 Component metadata lives in `components/<ComponentName>/component.json`. This gives agents stable imports, prop contracts, canonical examples, constraints, and relationships without requiring the MCP server to generate application code.
 
+Implementation files may live beside `component.json`. `get_component_source` returns these files so an agent can reuse the existing implementation instead of rewriting a component from model memory. Supported source extensions are `.ts`, `.tsx`, `.js`, `.jsx`, `.vue`, `.svelte`, `.swift`, `.kt`, `.java`, `.dart`, `.css`, `.scss`, and `.sass`. Story files are included by default and test/spec files are excluded by default; clients can override that per call.
+
 When TypeScript source files are present beside `component.json`, the loader also reads the first matching `*Props` interface or type literal, preferring `<ComponentName>Props`. Extracted props include names, types, required flags, string-union values, JSDoc descriptions, `@default`, `@deprecated`, replacement hints, and simple controlled-state hints. Extracted props are merged into the metadata. Hand-authored `component.json` values win when both sources define the same prop.
 
 When Storybook CSF files such as `Card.stories.tsx` are present, object stories with literal `args` are converted into additional usage examples. The parser also carries literal `argTypes.options` as controls and stores `play` functions as interaction notes. This keeps `get_usage` aligned with existing component examples without executing Storybook.
@@ -409,6 +416,52 @@ When Storybook CSF files such as `Card.stories.tsx` are present, object stories 
     "sideEffects": [],
     "notes": ["Import Button from @acme/ui/button; do not deep-import internal files."]
   },
+  "platforms": [
+    {
+      "platform": "web",
+      "framework": "react",
+      "package": "@acme/ui",
+      "importPath": "@acme/ui/button",
+      "component": "Button",
+      "tokens": {
+        "background": "token:color.action.primary",
+        "radius": "token:component.button.radius"
+      },
+      "props": {
+        "variant": "primary",
+        "size": "md"
+      },
+      "notes": ["Use the package import; do not recreate Button with a raw <button>."]
+    },
+    {
+      "platform": "ios",
+      "framework": "swiftui",
+      "package": "@acme/ios-ui",
+      "importPath": "AcmeUI.AcmeButton",
+      "component": "AcmeButton"
+    },
+    {
+      "platform": "android",
+      "framework": "jetpack-compose",
+      "package": "@acme/android-ui",
+      "importPath": "com.acme.ui.button.AcmeButton",
+      "component": "AcmeButton"
+    },
+    {
+      "platform": "react-native",
+      "framework": "react-native",
+      "package": "@acme/react-native-ui",
+      "importPath": "@acme/react-native-ui/button",
+      "component": "Button"
+    },
+    {
+      "platform": "flutter",
+      "framework": "flutter",
+      "package": "acme_ui",
+      "importPath": "package:acme_ui/acme_button.dart",
+      "component": "AcmeButton"
+    }
+  ],
   "status": "stable",
   "replacedBy": [],
   "tags": ["action", "form"],
@@ -441,6 +494,8 @@ When Storybook CSF files such as `Card.stories.tsx` are present, object stories 
   "related": []
 }
 ```
+
+Platform mappings are consumed by `get_usage`, `recommend_composition`, `validate_composition`, and `validate_design_contract`. For platform-specific work, clients should pass both `platform` and `framework`; the server prefers the exact mapping and does not fall back to a web import for unsupported platforms.
 
 Deprecated components can declare migration chains:
 
@@ -692,6 +747,98 @@ Example `validate_ui` request:
   "rules": ["no-hex-colors"]
 }
 ```
+
+Example `get_component_source` request:
+
+```json
+{
+  "id": "component:button",
+  "includeStories": true,
+  "includeTests": false,
+  "maxBytesPerFile": 30000
+}
+```
+
+Example `get_component_source` response shape:
+
+```json
+{
+  "id": "component:button",
+  "sourcePath": "components/Button/component.json",
+  "files": [
+    {
+      "path": "components/Button/Button.tsx",
+      "language": "tsx",
+      "bytes": 1280,
+      "truncated": false,
+      "content": "..."
+    },
+    {
+      "path": "components/Button/button.css",
+      "language": "css",
+      "bytes": 640,
+      "truncated": false,
+      "content": "..."
+    }
+  ],
+  "bundleVersion": "nogit-2026-05-05T12:00:00.000Z"
+}
+```
+
+Example `validate_design_contract` request:
+
+```json
+{
+  "contrastPairs": [
+    {
+      "foreground": "token:color.text.primary",
+      "background": "token:color.surface.raised",
+      "minimumRatio": 4.5
+    }
+  ],
+  "dataViz": {
+    "seriesTokens": ["token:dataviz.risk.high"],
+    "summary": "High risk invoice exposure increased this week."
+  },
+  "layout": {
+    "gapTokens": ["token:space.4"],
+    "rawValues": [],
+    "columns": 12,
+    "maxColumns": 12
+  },
+  "packages": [
+    {
+      "component": "component:button",
+      "package": "@acme/ui",
+      "version": "2.2.0"
+    }
+  ],
+  "platformUsage": {
+    "platform": "android",
+    "framework": "jetpack-compose",
+    "components": [
+      {
+        "id": "component:button",
+        "package": "@acme/android-ui",
+        "importPath": "com.acme.ui.button.AcmeButton"
+      }
+    ]
+  },
+  "visualRegression": {
+    "baseline": { "width": 1440, "height": 900, "hash": "risk-dashboard-v1" },
+    "current": { "width": 1440, "height": 900, "hash": "risk-dashboard-v1" },
+    "requireHashMatch": true
+  },
+  "externalDesignImport": {
+    "source": "figma",
+    "mappedTokens": ["token:color.action.primary", "token:space.4"],
+    "mappedComponents": ["component:button"],
+    "unmappedItems": []
+  }
+}
+```
+
+`validate_design_contract` returns `ok: false` when it finds error-severity handoff gaps such as unresolved or low-contrast color pairs, non-`token:dataviz.*` chart colors, missing chart summaries, raw layout values, undeclared package dependencies, platform package/import mismatches, visual baseline changes, or unmapped Figma/Sketch/Markdown/token import items.
 
 `validate_ui` also runs built-in semantic token, accessibility, and copy/voice checks:
 
