@@ -92,7 +92,11 @@ export const handler: ToolHandler<
       } else if (entity.type === "principle" && groups.principles.length < args.limit) {
         groups.principles.push(summarize(entity));
         provenance.set(entity.id, provenanceFor(entity, ["Matched the intent search query."]));
-      } else if (entity.type === "token" && groups.tokens.length < args.limit) {
+      } else if (
+        entity.type === "token" &&
+        groups.tokens.length < args.limit &&
+        tokenAllowedForPlatform(entity, args.platform)
+      ) {
         groups.tokens.push(summarize(entity));
         provenance.set(entity.id, provenanceFor(entity, ["Matched the intent search query."]));
       }
@@ -109,7 +113,12 @@ export const handler: ToolHandler<
       for (const rel of bundle.relations.outFor(component.id)) {
         const entity = bundle.entities.get(rel.to);
         if (!entity) continue;
-        if (rel.type === "uses_token" && entity.type === "token" && !seen.tokens.has(entity.id)) {
+        if (
+          rel.type === "uses_token" &&
+          entity.type === "token" &&
+          !seen.tokens.has(entity.id) &&
+          tokenAllowedForPlatform(entity, args.platform)
+        ) {
           groups.tokens.push(summarize(entity));
           seen.tokens.add(entity.id);
           provenance.set(
@@ -162,7 +171,15 @@ export const handler: ToolHandler<
       ...groups.principles.map((entity) => entity.id),
       ...groups.tokens.map((entity) => entity.id),
     ]);
-    fillAlternativesFromHits(hits, bundle.entities, selected, alternatives, provenance, args.limit);
+    fillAlternativesFromHits(
+      hits,
+      bundle.entities,
+      selected,
+      alternatives,
+      provenance,
+      args.limit,
+      args.platform,
+    );
 
     return {
       intent: args.intent,
@@ -226,6 +243,7 @@ function fillAlternativesFromHits(
   },
   provenance: Map<string, z.infer<typeof RecommendationProvenanceSchema>>,
   limit: number,
+  platform: string | undefined,
 ): void {
   const alternativeIds = new Set<string>();
   for (const hit of hits) {
@@ -237,8 +255,14 @@ function fillAlternativesFromHits(
       alternatives.patterns.push(summarize(entity));
     } else if (entity.type === "principle" && alternatives.principles.length < limit) {
       alternatives.principles.push(summarize(entity));
-    } else if (entity.type === "token" && alternatives.tokens.length < limit) {
+    } else if (
+      entity.type === "token" &&
+      alternatives.tokens.length < limit &&
+      tokenAllowedForPlatform(entity, platform)
+    ) {
       alternatives.tokens.push(summarize(entity));
+    } else if (entity.type === "token") {
+      continue;
     }
     alternativeIds.add(entity.id);
     provenance.set(
@@ -246,4 +270,15 @@ function fillAlternativesFromHits(
       provenanceFor(entity, ["Alternative matched the intent search query."]),
     );
   }
+}
+
+function tokenAllowedForPlatform(entity: Entity, platform: string | undefined): boolean {
+  if (!entity.id.startsWith("token:platform.")) return true;
+  if (!platform) return true;
+  const normalized = platform.toLowerCase();
+  if (normalized === "web") return entity.id.startsWith("token:platform.web.");
+  if (normalized === "ios") return entity.id.startsWith("token:platform.ios.");
+  if (normalized === "android") return entity.id.startsWith("token:platform.android.");
+  if (normalized === "react-native") return entity.id.startsWith("token:platform.react-native.");
+  return true;
 }
