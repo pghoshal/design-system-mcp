@@ -80,12 +80,42 @@ function cssTokenIndex(bundle: Bundle): CssTokenIndex {
     tokens.set(cssVar, {
       entity,
       cssVar,
-      isSemantic:
-        typeof original === "string" && original.startsWith("{") && original.endsWith("}"),
+      isSemantic: isSemanticToken(path, original),
     });
   }
   return { tokens, tokenStems };
 }
+
+function isSemanticToken(path: string[], original: unknown): boolean {
+  if (typeof original === "string" && original.startsWith("{") && original.endsWith("}")) {
+    return true;
+  }
+
+  const [family, role] = path;
+  if (family === undefined) return false;
+
+  if (family === "color") {
+    return role !== undefined && SEMANTIC_COLOR_ROLES.has(role);
+  }
+
+  return SEMANTIC_TOKEN_FAMILIES.has(family);
+}
+
+const SEMANTIC_COLOR_ROLES = new Set(["action", "border", "focus", "status", "surface", "text"]);
+
+const SEMANTIC_TOKEN_FAMILIES = new Set([
+  "app",
+  "breakpoint",
+  "component",
+  "dataviz",
+  "density",
+  "elevation",
+  "layer",
+  "motion",
+  "platform",
+  "state",
+  "theme",
+]);
 
 function findRawLengths(code: string): Violation[] {
   const re = /(?<![\w.-])-?\d+(?:\.\d+)?(?:px|rem|em)\b/g;
