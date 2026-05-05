@@ -166,13 +166,26 @@ describe("Phase 4 — stdio transport", () => {
     expect(workflowJson.modes).toContainEqual(
       expect.objectContaining({
         name: "final_check",
-        requiredEvidence: ["validate_composition", "validate_ui", "validate_design_contract"],
+        requiredEvidence: [
+          "workflowEvidence",
+          "componentSourceEvidence",
+          "tokenResolutionEvidence",
+          "decisionEvidence",
+          "validate_composition",
+          "validate_ui",
+          "validate_design_contract",
+        ],
       }),
     );
     expect(workflowJson.finalGate.mode).toBe("final_check");
+    expect(workflowJson.requiredSequence).toContain("inspect_coverage");
     expect(workflowJson.requiredSequence).toContain("get_component_source");
+    expect(workflowJson.requiredSequence).toContain("resolve_token");
     expect(workflowJson.requiredSequence).toContain("validate_design_contract");
     expect(workflowJson.finalGate.requiredTools).toContain("validate_composition");
+    expect(workflowJson.finalGate.requiredTools).toContain("get_component_source");
+    expect(workflowJson.finalGate.requiredEvidence).toContain("workflowEvidence");
+    expect(workflowJson.finalGate.requiredEvidence).toContain("componentSourceEvidence");
     expect(workflowJson.finalGate.requiredEvidence).toContain("validate_ui");
     expect(workflowJson.finalGate.requiredEvidence).toContain("validate_design_contract");
   });

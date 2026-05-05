@@ -4,6 +4,7 @@ import { ApiKeyValidator } from "../auth/apikey.js";
 import type { Config } from "../config.js";
 import { buildMcpServer } from "../server/mcp.js";
 import type { ServerDeps, TransportHandle } from "../server/types.js";
+import { WorkflowAuditStore } from "../server/workflow-audit.js";
 
 export interface HttpTransportHandle extends TransportHandle {
   /** Force-refresh trigger for tests. Production callers go via POST /admin/refresh. */
@@ -14,6 +15,7 @@ export interface HttpTransportHandle extends TransportHandle {
 
 export async function startHttp(cfg: Config, deps: ServerDeps): Promise<HttpTransportHandle> {
   const app: FastifyInstance = Fastify({ logger: false, disableRequestLogging: true });
+  const serverDeps: ServerDeps = { ...deps, audit: deps.audit ?? new WorkflowAuditStore() };
 
   const validator =
     cfg.DS_MCP_AUTH_MODE === "apikey" ? new ApiKeyValidator(cfg.DS_MCP_API_KEYS ?? "") : null;
@@ -26,11 +28,11 @@ export async function startHttp(cfg: Config, deps: ServerDeps): Promise<HttpTran
       reply.code(503);
       return { status: "draining" };
     }
-    if (!deps.source.hasBundle()) {
+    if (!serverDeps.source.hasBundle()) {
       reply.code(503);
       return { status: "not_ready", bundleLoaded: false };
     }
-    return { status: "ok", bundleLoaded: true, bundleVersion: deps.source.current().version };
+    return { status: "ok", bundleLoaded: true, bundleVersion: serverDeps.source.current().version };
   });
   app.get("/version", async () => ({
     name: "ds-mcp-server",
@@ -38,8 +40,8 @@ export async function startHttp(cfg: Config, deps: ServerDeps): Promise<HttpTran
     mode: cfg.DS_MCP_MODE,
     sourceMode: cfg.DS_MCP_SOURCE_MODE,
     authMode: cfg.DS_MCP_AUTH_MODE,
-    bundleLoaded: deps.source.hasBundle(),
-    bundleVersion: deps.source.hasBundle() ? deps.source.current().version : null,
+    bundleLoaded: serverDeps.source.hasBundle(),
+    bundleVersion: serverDeps.source.hasBundle() ? serverDeps.source.current().version : null,
   }));
 
   // -------- MCP endpoint (Streamable HTTP, stateless) --------
@@ -51,7 +53,7 @@ export async function startHttp(cfg: Config, deps: ServerDeps): Promise<HttpTran
     reply: import("fastify").FastifyReply,
     body: unknown,
   ): Promise<void> => {
-    const reqServer = buildMcpServer(deps);
+    const reqServer = buildMcpServer(serverDeps);
     const reqTransport = new StreamableHTTPServerTransport({
       // biome-ignore lint/suspicious/noExplicitAny: SDK option type vs exactOptionalPropertyTypes
       sessionIdGenerator: undefined as any,
@@ -138,18 +140,18 @@ export async function startHttp(cfg: Config, deps: ServerDeps): Promise<HttpTran
   await app.listen({ port: cfg.PORT, host: "0.0.0.0" });
   const addr = app.server.address();
   const port = typeof addr === "object" && addr ? addr.port : cfg.PORT;
-  deps.logger.info({ port, authMode: cfg.DS_MCP_AUTH_MODE }, "http transport listening");
+  serverDeps.logger.info({ port, authMode: cfg.DS_MCP_AUTH_MODE }, "http transport listening");
 
   return {
     port,
     beginDrain: () => {
       draining = true;
-      deps.logger.info("http transport: drain initiated");
+      serverDeps.logger.info("http transport: drain initiated");
     },
     stop: async () => {
       await app.close();
-      deps.logger.info("http transport closed");
+      serverDeps.logger.info("http transport closed");
     },
-    internalRefresh: () => deps.source.refresh(),
+    internalRefresh: () => serverDeps.source.refresh(),
   };
 }

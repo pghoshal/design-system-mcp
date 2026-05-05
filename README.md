@@ -705,6 +705,7 @@ The server exposes generic verbs:
 
 | Tool | Purpose |
 | --- | --- |
+| `start_workflow` | Start a server-side audited handoff session and return a `workflowSessionId` |
 | `describe_schema` | Show content types, relations, and bundle metadata |
 | `search_design_system` | Search tokens, docs, patterns, voice, and prompts |
 | `get_entity` | Fetch one entity by ID |
@@ -724,19 +725,24 @@ The server exposes generic verbs:
 
 For best UX-to-dev consistency, agents and CI should follow this sequence:
 
-1. Read `design://workflow` or call `describe_schema`.
-2. Call `inspect_coverage` to understand whether the source is enterprise-complete or token-only/community-grade.
-3. Call `recommend_composition` with the UI intent.
-4. Call `explain_decision` for selected components, patterns, or tokens when the harness needs auditable reasoning.
-5. Call `get_usage` for selected components and `get_component_source` when implementation already exists.
-6. Call `resolve_token` for every concrete token value.
-7. Call `validate_composition` before generating code.
-8. Generate code by composing/importing returned components rather than recreating them.
-9. Call `validate_ui` and apply deterministic `repair` / `replaceWith` edits first.
-10. Call `validate_design_contract` for handoff evidence that is not visible in a code snippet, such as contrast pairs, chart summaries, package versions, platform mappings, visual baselines, and Figma/Markdown/token import coverage.
-11. In CI or final harness mode, run `pnpm validate -- --mode final_check --composition composition.json --contract handoff.json <file...>`. The final gate requires UI, composition, and design-contract evidence.
+1. Call `start_workflow` and keep the returned `workflowSessionId`.
+2. Read `design://workflow` or call `describe_schema`, passing the same `workflowSessionId` to every MCP tool call.
+3. Call `search_design_system`, `list_entities`, `get_entity`, and `get_related` to load relevant patterns, principles, conventions, voice, and relation evidence.
+4. Call `inspect_coverage` with the right profile, normally `enterprise`.
+5. Call `recommend_composition` with the UI intent.
+6. Call `explain_decision` for selected components, patterns, or tokens.
+7. Call `get_usage` for selected components.
+8. Call `get_component_source` for every selected component class before writing imports or markup.
+9. Call `resolve_token` for every concrete token value.
+10. Call `validate_composition` before generating code.
+11. Generate code by importing returned components when a target platform/framework mapping exists. If the requested artifact is plain HTML and no HTML mapping exists, use `html-adapter` mode and mirror canonical source/usage structure.
+12. Call `validate_ui` and apply deterministic `repair` / `replaceWith` edits first.
+13. Call `validate_design_contract` with `workflowEvidence`, `componentSourceEvidence`, `tokenResolutionEvidence`, and `decisionEvidence` plus visual handoff evidence.
+14. In CI or final harness mode, run `pnpm validate -- --mode final_check --composition composition.json --contract handoff.json <file...>`. The final gate requires UI, composition, design-contract evidence, and proof that the full MCP workflow was used.
 
 The server publishes the workflow contract at `design://workflow`; hard blocking is enforced by the validation CLI and by any client harness that honors that resource.
+
+For enterprise final handoff over MCP, `validate_design_contract` also checks the server-side `workflowSessionId` audit trail. Every `workflowEvidence.toolResults[]` entry must include `bundleVersion`, `ok: true`, and the `sha256:` `resultHash` returned by the corresponding tool call. The contract validator verifies those hashes for `get_component_source`, `get_usage`, `resolve_token`, and `explain_decision` and rejects final handoff when required tools were not recorded in the session.
 
 Example `validate_ui` request:
 
@@ -793,6 +799,74 @@ Example `validate_design_contract` request:
 
 ```json
 {
+  "workflowEvidence": {
+    "workflowSessionId": "workflow-abc123",
+    "requiredToolsUsed": [
+      "start_workflow",
+      "describe_schema",
+      "search_design_system",
+      "list_entities",
+      "get_entity",
+      "get_related",
+      "inspect_coverage",
+      "recommend_composition",
+      "get_usage",
+      "get_component_source",
+      "resolve_token",
+      "validate_composition",
+      "validate_ui",
+      "validate_design_contract",
+      "explain_decision"
+    ],
+    "toolResults": [
+      { "tool": "start_workflow", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
+      { "tool": "describe_schema", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
+      { "tool": "search_design_system", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
+      { "tool": "list_entities", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
+      { "tool": "get_entity", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
+      { "tool": "get_related", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
+      { "tool": "inspect_coverage", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
+      { "tool": "recommend_composition", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
+      { "tool": "get_usage", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:<verified by validate_design_contract>" },
+      { "tool": "get_component_source", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:<verified by validate_design_contract>" },
+      { "tool": "resolve_token", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:<verified by validate_design_contract>" },
+      { "tool": "validate_composition", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
+      { "tool": "validate_ui", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
+      { "tool": "validate_design_contract", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
+      { "tool": "explain_decision", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:<verified by validate_design_contract>" }
+    ],
+    "resourcesRead": ["design://workflow"],
+    "coverageProfile": "enterprise",
+    "coverageInspected": true
+  },
+  "componentSourceEvidence": {
+    "mode": "imported",
+    "targetPlatform": "web",
+    "targetFramework": "react",
+    "components": [
+      {
+        "id": "component:button",
+        "sourceChecked": true,
+        "usageChecked": true,
+        "sourceFiles": ["components/Button/Button.tsx", "components/Button/button.css"],
+        "imported": true,
+        "package": "@acme/ui",
+        "importPath": "@acme/ui/button"
+      }
+    ]
+  },
+  "tokenResolutionEvidence": {
+    "resolvedTokens": [
+      { "id": "token:color.text.primary" },
+      { "id": "token:color.surface.raised" },
+      { "id": "token:color.action.primary" },
+      { "id": "token:space.4" }
+    ],
+    "cssVariables": ["--color-text-primary", "--color-surface-raised", "--color-action-primary"]
+  },
+  "decisionEvidence": {
+    "explainedEntities": ["component:button", "token:color.action.primary"]
+  },
   "contrastPairs": [
     {
       "foreground": "token:color.text.primary",
@@ -854,7 +928,7 @@ Example `validate_design_contract` request:
 }
 ```
 
-`validate_design_contract` returns `ok: false` when it finds error-severity handoff gaps such as unresolved or low-contrast color pairs, missing theme variants for component-critical color/state/data-viz tokens, non-`token:dataviz.*` chart colors, missing chart summaries, raw layout values, undeclared package dependencies, missing or incompatible peer dependencies, platform package/import mismatches, visual baseline/diff changes, or unmapped Figma/Sketch/Markdown/token import items.
+`validate_design_contract` returns `ok: false` when it finds error-severity handoff gaps such as missing required workflow tool evidence, skipped `get_component_source` / `get_usage` evidence, unexplained component choices, missing `resolve_token` evidence, hand-written component adapters where a real platform implementation exists, unresolved or low-contrast color pairs, missing theme variants for component-critical color/state/data-viz tokens, non-`token:dataviz.*` chart colors, missing chart summaries, raw layout values, undeclared package dependencies, missing or incompatible peer dependencies, platform package/import mismatches, visual baseline/diff changes, or unmapped Figma/Sketch/Markdown/token import items.
 
 `validate_ui` also runs built-in semantic token, accessibility, and copy/voice checks:
 
@@ -964,7 +1038,7 @@ pnpm validate -- --source ./path/to/design-system --contract handoff.json
 pnpm validate -- --source ./path/to/design-system --mode final_check --composition composition.json --contract handoff.json src/App.tsx
 ```
 
-The command prints JSON or SARIF and exits `1` if any error-severity `validate_ui`, `validate_composition`, or `validate_design_contract` violation is found. In `--mode final_check`, it also exits `1` when required harness evidence is missing, such as running UI validation without a composition plan or handoff contract evidence.
+The command prints JSON or SARIF and exits `1` if any error-severity `validate_ui`, `validate_composition`, or `validate_design_contract` violation is found. In `--mode final_check`, it also exits `1` when required harness evidence is missing, such as running UI validation without a composition plan, handoff contract, workflow evidence, component-source evidence, token-resolution evidence, or decision evidence.
 
 This project follows test-first development for non-trivial changes. Add focused tests first, implement the smallest safe change, then run the relevant verification before committing.
 

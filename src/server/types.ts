@@ -2,6 +2,7 @@ import type { ZodTypeAny, z } from "zod";
 import type { Logger } from "../observability/logger.js";
 import type { SourceManager } from "../source/manager.js";
 import type { LayeredCache } from "../util/lru.js";
+import type { WorkflowAuditStore } from "./workflow-audit.js";
 
 /**
  * Per-request context. Tools must use these accessors and not reach into globals.
@@ -11,6 +12,7 @@ export interface RequestContext {
   cache: LayeredCache;
   logger: Logger;
   requestId: string;
+  audit?: WorkflowAuditStore | undefined;
 }
 
 /**
@@ -21,6 +23,7 @@ export interface ServerDeps {
   source: SourceManager;
   cache: LayeredCache;
   logger: Logger;
+  audit?: WorkflowAuditStore | undefined;
 }
 
 /**

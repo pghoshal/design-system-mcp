@@ -137,6 +137,7 @@ describe("Phase 2 — HTTP transport", () => {
       expect(names).toContain("validate_design_contract");
       expect(names).toContain("inspect_coverage");
       expect(names).toContain("explain_decision");
+      expect(names).toContain("start_workflow");
 
       const result = await client.callTool({
         name: "describe_schema",
@@ -182,6 +183,159 @@ describe("Phase 2 — HTTP transport", () => {
       const csc = coverage.structuredContent as { ok: boolean; issues: unknown[] };
       expect(csc.ok).toBe(true);
       expect(csc.issues).toEqual([]);
+
+      await client.close();
+    }, 15_000);
+
+    it("validate_design_contract enforces server-side workflow audit sessions", async () => {
+      const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
+        requestInit: { headers: { Authorization: `Bearer ${API_KEY}` } },
+      });
+      const client = new Client({ name: "test-client", version: "0.0.1" }, { capabilities: {} });
+      // biome-ignore lint/suspicious/noExplicitAny: SDK boundary
+      await client.connect(transport as any);
+
+      const toolResults: Array<{
+        tool: string;
+        ok: boolean;
+        bundleVersion: string;
+        resultHash: string;
+      }> = [];
+      let bundleVersion = "";
+      const call = async (tool: string, args: Record<string, unknown>) => {
+        const result = await client.callTool({ name: tool, arguments: args });
+        const structured = result.structuredContent as {
+          bundleVersion?: string;
+          resultHash?: string;
+        };
+        if (structured.bundleVersion) bundleVersion = structured.bundleVersion;
+        toolResults.push({
+          tool,
+          ok: !result.isError,
+          bundleVersion: structured.bundleVersion ?? bundleVersion,
+          resultHash: structured.resultHash ?? "sha256:missing",
+        });
+        return structured;
+      };
+
+      const start = (await call("start_workflow", {
+        intent: "Build a confirmation action",
+      })) as { workflowSessionId: string; bundleVersion: string };
+      const workflowSessionId = start.workflowSessionId;
+      bundleVersion = start.bundleVersion;
+      const session = { workflowSessionId };
+
+      await call("describe_schema", session);
+      await call("search_design_system", { ...session, query: "button", limit: 3 });
+      await call("list_entities", { ...session, type: "component", limit: 3 });
+      await call("get_entity", { ...session, id: "component:button" });
+      await call("get_related", { ...session, id: "component:button" });
+      await call("inspect_coverage", { ...session, include_warnings: false });
+      await call("recommend_composition", {
+        ...session,
+        intent: "Confirmation dialog with primary action",
+        limit: 5,
+      });
+      await call("get_usage", {
+        ...session,
+        id: "component:button",
+        platform: "web",
+        framework: "react",
+      });
+      await call("get_component_source", {
+        ...session,
+        id: "component:button",
+        includeStories: false,
+      });
+      await call("resolve_token", { ...session, query: "color.action.primary", limit: 1 });
+      await call("validate_composition", {
+        ...session,
+        pattern: "pattern:confirmation-dialog",
+        platform: "web",
+        framework: "react",
+        tokens: ["token:color.action.primary"],
+        components: [
+          {
+            id: "component:button",
+            props: { variant: "primary", children: "Save changes" },
+          },
+        ],
+      });
+      await call("validate_ui", {
+        ...session,
+        language: "tsx",
+        code: "const color = 'var(--color-action-primary)';",
+      });
+      await call("explain_decision", { ...session, entityId: "component:button" });
+      await call("explain_decision", { ...session, entityId: "token:color.action.primary" });
+
+      const contract = await client.callTool({
+        name: "validate_design_contract",
+        arguments: {
+          workflowSessionId,
+          workflowEvidence: {
+            workflowSessionId,
+            requiredToolsUsed: [
+              "start_workflow",
+              "describe_schema",
+              "search_design_system",
+              "list_entities",
+              "get_entity",
+              "get_related",
+              "inspect_coverage",
+              "recommend_composition",
+              "get_usage",
+              "get_component_source",
+              "resolve_token",
+              "validate_composition",
+              "validate_ui",
+              "validate_design_contract",
+              "explain_decision",
+            ],
+            toolResults: [
+              ...toolResults,
+              {
+                tool: "validate_design_contract",
+                ok: true,
+                bundleVersion,
+                resultHash: "sha256:current-call",
+              },
+            ],
+            resourcesRead: ["design://workflow"],
+            coverageProfile: "enterprise",
+            coverageInspected: true,
+          },
+          componentSourceEvidence: {
+            mode: "imported",
+            targetPlatform: "web",
+            targetFramework: "react",
+            components: [
+              {
+                id: "component:button",
+                sourceChecked: true,
+                usageChecked: true,
+                sourceFiles: ["components/Button/component.json"],
+                imported: true,
+                package: "@acme/react-ui",
+                importPath: "@acme/react-ui/button",
+              },
+            ],
+          },
+          tokenResolutionEvidence: {
+            resolvedTokens: [{ id: "token:color.action.primary" }],
+            cssVariables: ["--color-action-primary"],
+          },
+          decisionEvidence: {
+            explainedEntities: ["component:button", "token:color.action.primary"],
+          },
+        },
+      });
+      const structured = contract.structuredContent as {
+        ok: boolean;
+        violations: Array<{ ruleId: string }>;
+      };
+      expect(structured.ok).toBe(true);
+      expect(structured.violations).toEqual([]);
 
       await client.close();
     }, 15_000);
@@ -273,23 +427,38 @@ describe("Phase 2 — HTTP transport", () => {
       expect(workflowJson.modes).toContainEqual(
         expect.objectContaining({
           name: "final_check",
-          requiredEvidence: ["validate_composition", "validate_ui", "validate_design_contract"],
+          requiredEvidence: [
+            "workflowEvidence",
+            "componentSourceEvidence",
+            "tokenResolutionEvidence",
+            "decisionEvidence",
+            "validate_composition",
+            "validate_ui",
+            "validate_design_contract",
+          ],
         }),
       );
       expect(workflowJson.stateMachine).toContainEqual({ from: "validate", to: "final_check" });
       expect(workflowJson.requiredSequence).toContain("recommend_composition");
+      expect(workflowJson.requiredSequence).toContain("inspect_coverage");
       expect(workflowJson.requiredSequence).toContain("get_component_source");
+      expect(workflowJson.requiredSequence).toContain("resolve_token");
       expect(workflowJson.requiredSequence).toContain("validate_design_contract");
       expect(workflowJson.finalGate.mode).toBe("final_check");
       expect(workflowJson.finalGate.requiredTools).toContain("validate_ui");
+      expect(workflowJson.finalGate.requiredTools).toContain("get_component_source");
       expect(workflowJson.finalGate.requiredEvidence).toEqual([
+        "workflowEvidence",
+        "componentSourceEvidence",
+        "tokenResolutionEvidence",
+        "decisionEvidence",
         "validate_composition",
         "validate_ui",
         "validate_design_contract",
       ]);
       expect(workflowJson.finalGate.cli).toContain("--mode final_check");
       expect(workflowJson.finalGate.cli).toContain("--contract");
-      expect(workflowJson.finalGate.requiredOutcome).toContain("no missing required evidence");
+      expect(workflowJson.finalGate.requiredOutcome).toContain("no missing workflow");
 
       const entity = await client.readResource({ uri: "design://entity/principle:clarity" });
       const body = entity.contents[0];

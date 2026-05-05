@@ -4,6 +4,7 @@ import pino from "pino";
 import { z } from "zod";
 import { RuleLanguageSchema } from "./bundle/schema.js";
 import type { RuleLanguage } from "./bundle/types.js";
+import { WorkflowAuditStore } from "./server/workflow-audit.js";
 import { LocalSourceAdapter } from "./source/local.js";
 import { SourceManager } from "./source/manager.js";
 import {
@@ -44,6 +45,7 @@ interface CompositionResult {
   ok: boolean;
   violations: Awaited<ReturnType<typeof validateCompositionHandler.handle>>["violations"];
   checkedComponents: string[];
+  plannedTokens: string[];
   bundleVersion: string;
 }
 
@@ -68,12 +70,14 @@ async function main(argv: string[]): Promise<number> {
     refreshIntervalSec: 60,
   });
   const cache = new LayeredCache();
+  const audit = new WorkflowAuditStore();
 
   try {
     await source.initial();
     const results: FileResult[] = [];
     const compositions: CompositionResult[] = [];
     const contracts: ContractResult[] = [];
+    const contractInputs: Array<z.infer<typeof ValidateDesignContractInput>> = [];
 
     for (const file of parsed.files) {
       const abs = path.resolve(file);
@@ -116,6 +120,7 @@ async function main(argv: string[]): Promise<number> {
         ok: result.ok,
         violations: result.violations,
         checkedComponents: result.checkedComponents,
+        plannedTokens: input.tokens ?? [],
         bundleVersion: result.bundleVersion,
       });
     }
@@ -124,11 +129,13 @@ async function main(argv: string[]): Promise<number> {
       const abs = path.resolve(file);
       const raw = JSON.parse(await fs.readFile(abs, "utf8")) as unknown;
       const input = ValidateDesignContractInput.parse(raw);
+      contractInputs.push(input);
       const result = await validateDesignContractHandler.handle(input, {
         source,
         cache,
         logger,
         requestId: "validate-cli",
+        audit,
       });
       contracts.push({
         path: path.relative(process.cwd(), abs),
@@ -136,6 +143,17 @@ async function main(argv: string[]): Promise<number> {
         violations: result.violations,
         bundleVersion: result.bundleVersion,
       });
+    }
+
+    if (parsed.mode === "final_check" && compositions.length > 0 && contracts.length > 0) {
+      contracts[0]?.violations.push(
+        ...validateContractEvidenceCoverage(compositions, contractInputs),
+      );
+      if (contracts[0]) {
+        contracts[0].ok = !contracts[0].violations.some(
+          (violation) => violation.severity === "error",
+        );
+      }
     }
 
     const errorCount =
@@ -202,6 +220,66 @@ async function main(argv: string[]): Promise<number> {
   } finally {
     await source.stop();
   }
+}
+
+function validateContractEvidenceCoverage(
+  compositions: CompositionResult[],
+  contracts: Array<z.infer<typeof ValidateDesignContractInput>>,
+): Awaited<ReturnType<typeof validateDesignContractHandler.handle>>["violations"] {
+  const out: Awaited<ReturnType<typeof validateDesignContractHandler.handle>>["violations"] = [];
+  const evidenceComponents = new Set(
+    contracts.flatMap((contract) =>
+      contract.componentSourceEvidence.components.map((component) => component.id),
+    ),
+  );
+  const evidenceTokens = new Set(
+    contracts.flatMap((contract) =>
+      contract.tokenResolutionEvidence.resolvedTokens.map((token) => normalizeTokenId(token.id)),
+    ),
+  );
+  const decisionEntities = new Set(
+    contracts.flatMap((contract) => contract.decisionEvidence.explainedEntities),
+  );
+
+  for (const composition of compositions) {
+    for (const componentId of composition.checkedComponents) {
+      if (!evidenceComponents.has(componentId)) {
+        out.push({
+          ruleId: "final-contract-component-evidence-missing",
+          severity: "error",
+          path: "componentSourceEvidence.components",
+          message: `Final contract evidence does not cover composed component ${componentId}.`,
+          sourceEntity: componentId,
+        });
+      }
+      if (!decisionEntities.has(componentId)) {
+        out.push({
+          ruleId: "final-contract-decision-evidence-missing",
+          severity: "error",
+          path: "decisionEvidence.explainedEntities",
+          message: `Final contract evidence does not explain composed component ${componentId}.`,
+          sourceEntity: componentId,
+        });
+      }
+    }
+    for (const tokenId of composition.plannedTokens.map(normalizeTokenId)) {
+      if (!evidenceTokens.has(tokenId)) {
+        out.push({
+          ruleId: "final-contract-token-evidence-missing",
+          severity: "error",
+          path: "tokenResolutionEvidence.resolvedTokens",
+          message: `Final contract evidence does not include resolve_token evidence for ${tokenId}.`,
+          sourceEntity: tokenId,
+        });
+      }
+    }
+  }
+
+  return out;
+}
+
+function normalizeTokenId(value: string): string {
+  return value.startsWith("token:") ? value : `token:${value}`;
 }
 
 function parseArgs(argv: string[]): CliOptions | { error: string } {

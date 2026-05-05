@@ -4,7 +4,10 @@ import pino from "pino";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { LocalSourceAdapter } from "../../../src/source/local.js";
 import { SourceManager } from "../../../src/source/manager.js";
-import { handler } from "../../../src/tools/validate-design-contract.js";
+import {
+  expectedWorkflowResultHashesForInput,
+  handler,
+} from "../../../src/tools/validate-design-contract.js";
 import { LayeredCache } from "../../../src/util/lru.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -15,6 +18,73 @@ const logger = pino({ level: "silent" });
 let manager: SourceManager;
 let cache: LayeredCache;
 const ctx = () => ({ source: manager, cache, logger, requestId: "validate-contract-test" });
+
+const allWorkflowTools = [
+  "start_workflow",
+  "describe_schema",
+  "search_design_system",
+  "list_entities",
+  "get_entity",
+  "get_related",
+  "inspect_coverage",
+  "recommend_composition",
+  "get_usage",
+  "get_component_source",
+  "resolve_token",
+  "validate_composition",
+  "validate_ui",
+  "validate_design_contract",
+  "explain_decision",
+] as const;
+
+async function requiredEvidence() {
+  const bundleVersion = manager.current().version;
+  const evidence = {
+    workflowEvidence: {
+      requiredToolsUsed: [...allWorkflowTools],
+      toolResults: [],
+      resourcesRead: ["design://workflow"],
+      coverageProfile: "enterprise" as const,
+      coverageInspected: true,
+    },
+    componentSourceEvidence: {
+      mode: "imported" as const,
+      targetPlatform: "react-native",
+      targetFramework: "react-native",
+      components: [
+        {
+          id: "component:button",
+          sourceChecked: true,
+          usageChecked: true,
+          sourceFiles: ["components/Button/component.json"],
+          imported: true,
+          package: "@acme/react-native-ui",
+          importPath: "@acme/react-native-ui/button",
+        },
+      ],
+    },
+    tokenResolutionEvidence: {
+      resolvedTokens: [{ id: "token:color.action.primary" }, { id: "token:space.4" }],
+      cssVariables: ["--color-action-primary", "--space-4"],
+    },
+    decisionEvidence: {
+      explainedEntities: ["component:button", "token:color.action.primary"],
+    },
+  };
+  const expectedHashes = await expectedWorkflowResultHashesForInput(manager.current(), evidence);
+  return {
+    ...evidence,
+    workflowEvidence: {
+      ...evidence.workflowEvidence,
+      toolResults: allWorkflowTools.map((tool) => ({
+        tool,
+        ok: true,
+        bundleVersion,
+        resultHash: expectedHashes.get(tool) ?? `sha256:${tool}-not-verifiable-in-unit-test`,
+      })),
+    },
+  };
+}
 
 beforeAll(async () => {
   cache = new LayeredCache();
@@ -34,6 +104,7 @@ describe("validate_design_contract", () => {
   it("accepts valid structured handoff evidence", async () => {
     const result = await handler.handle(
       {
+        ...(await requiredEvidence()),
         contrastPairs: [
           {
             foreground: "token:color.text.primary",
@@ -90,6 +161,7 @@ describe("validate_design_contract", () => {
   it("reports contrast, data-viz, layout, package, platform, visual, and import gaps", async () => {
     const result = await handler.handle(
       {
+        ...(await requiredEvidence()),
         contrastPairs: [{ foreground: "#ffffff", background: "#ffffff", minimumRatio: 4.5 }],
         dataViz: { seriesTokens: ["token:color.action.primary"], requireSummary: true },
         layout: { rawValues: ["24px"], columns: 16, maxColumns: 12 },
@@ -142,6 +214,7 @@ describe("validate_design_contract", () => {
   it("rejects malformed raw hex colors and unknown package components", async () => {
     const result = await handler.handle(
       {
+        ...(await requiredEvidence()),
         contrastPairs: [{ foreground: "#nothex", background: "#ffffff", minimumRatio: 4.5 }],
         packages: [{ component: "component:not-real", package: "@acme/ui", version: "1.0.0" }],
       },
@@ -156,6 +229,7 @@ describe("validate_design_contract", () => {
   it("fails themed handoff evidence when component tokens lack theme variants", async () => {
     const result = await handler.handle(
       {
+        ...(await requiredEvidence()),
         themeCoverage: {
           themes: ["dark", "highContrast"],
           components: ["component:button"],
@@ -169,5 +243,156 @@ describe("validate_design_contract", () => {
       "theme-token-variant-missing",
     );
     expect(result.violations[0]?.message).toContain("token:theme.dark.color.action.primary");
+  });
+
+  it("fails final handoff when required workflow tools and component source evidence are missing", async () => {
+    const result = await handler.handle(
+      {
+        ...(await requiredEvidence()),
+        workflowEvidence: {
+          requiredToolsUsed: ["describe_schema", "validate_ui", "validate_design_contract"],
+          resourcesRead: [],
+          coverageProfile: "community",
+          coverageInspected: false,
+        },
+        componentSourceEvidence: {
+          mode: "html-adapter",
+          targetPlatform: "web",
+          targetFramework: "react",
+          components: [
+            {
+              id: "component:button",
+              sourceChecked: false,
+              usageChecked: false,
+              sourceFiles: [],
+              canonicalStructureMirrored: false,
+            },
+          ],
+        },
+        tokenResolutionEvidence: {
+          resolvedTokens: [],
+          cssVariables: ["not-a-var"],
+        },
+        decisionEvidence: {
+          explainedEntities: [],
+        },
+      },
+      ctx(),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((violation) => violation.ruleId)).toEqual(
+      expect.arrayContaining([
+        "workflow-required-tool-missing",
+        "workflow-coverage-not-inspected",
+        "workflow-enterprise-coverage-required",
+        "component-source-not-consulted",
+        "component-usage-not-consulted",
+        "component-decision-not-explained",
+        "component-adapter-not-allowed",
+        "component-adapter-structure-unverified",
+        "component-adapter-rationale-required",
+        "token-resolution-evidence-empty",
+        "token-resolution-css-var-invalid",
+        "decision-evidence-empty",
+      ]),
+    );
+  });
+
+  it("rejects fabricated workflow hashes for bundle-bound evidence", async () => {
+    const evidence = await requiredEvidence();
+    const result = await handler.handle(
+      {
+        ...evidence,
+        workflowEvidence: {
+          ...evidence.workflowEvidence,
+          toolResults: evidence.workflowEvidence.toolResults.map((entry) =>
+            entry.tool === "get_component_source"
+              ? { ...entry, resultHash: "sha256:fabricated" }
+              : entry,
+          ),
+        },
+      },
+      ctx(),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((violation) => violation.ruleId)).toContain(
+      "workflow-tool-result-hash-mismatch",
+    );
+  });
+
+  it("allows html adapter mode only when no platform implementation mapping exists", async () => {
+    const evidence = await requiredEvidence();
+    const htmlEvidence = {
+      ...evidence,
+      componentSourceEvidence: {
+        mode: "html-adapter" as const,
+        targetPlatform: "html",
+        targetFramework: "static",
+        components: [
+          {
+            id: "component:button",
+            sourceChecked: true,
+            usageChecked: true,
+            sourceFiles: ["components/Button/component.json"],
+            adapterRationale:
+              "The requested artifact is static HTML; no HTML component mapping exists.",
+            canonicalStructureMirrored: true,
+          },
+        ],
+      },
+    };
+    const expectedHashes = await expectedWorkflowResultHashesForInput(
+      manager.current(),
+      htmlEvidence,
+    );
+    const result = await handler.handle(
+      {
+        ...htmlEvidence,
+        workflowEvidence: {
+          ...htmlEvidence.workflowEvidence,
+          toolResults: htmlEvidence.workflowEvidence.toolResults.map((entry) => ({
+            ...entry,
+            resultHash: expectedHashes.get(entry.tool) ?? entry.resultHash,
+          })),
+        },
+      },
+      ctx(),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.violations).toEqual([]);
+  });
+
+  it("requires package and importPath evidence in imported mode", async () => {
+    const result = await handler.handle(
+      {
+        ...(await requiredEvidence()),
+        componentSourceEvidence: {
+          mode: "imported",
+          targetPlatform: "web",
+          targetFramework: "react",
+          components: [
+            {
+              id: "component:button",
+              sourceChecked: true,
+              usageChecked: true,
+              sourceFiles: ["components/Button/component.json"],
+              imported: true,
+            },
+          ],
+        },
+      },
+      ctx(),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((violation) => violation.ruleId)).toEqual(
+      expect.arrayContaining([
+        "component-source-package-required",
+        "component-source-import-required",
+      ]),
+    );
   });
 });

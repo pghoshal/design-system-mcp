@@ -4,7 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import pino from "pino";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { buildBundle } from "../../src/bundle/builder.js";
+import { expectedWorkflowResultHashesForInput } from "../../src/tools/validate-design-contract.js";
 
 const execFileAsync = promisify(execFile);
 const __filename = fileURLToPath(import.meta.url);
@@ -16,6 +19,95 @@ const ENTRY = path.join(REPO_ROOT, "src", "validate-cli.ts");
 const PNPM_CLI = process.env.npm_execpath;
 
 let tmpDir: string;
+let fixtureBundleVersion: string | undefined;
+let fixtureBundle: Awaited<ReturnType<typeof buildBundle>> | undefined;
+
+const allWorkflowTools = [
+  "start_workflow",
+  "describe_schema",
+  "search_design_system",
+  "list_entities",
+  "get_entity",
+  "get_related",
+  "inspect_coverage",
+  "recommend_composition",
+  "get_usage",
+  "get_component_source",
+  "resolve_token",
+  "validate_composition",
+  "validate_ui",
+  "validate_design_contract",
+  "explain_decision",
+] as const;
+
+async function requiredContractEvidence() {
+  fixtureBundle ??= await buildBundle({
+    sourcePath: FIXTURE,
+    logger: pino({ level: "silent" }),
+  });
+  fixtureBundleVersion = fixtureBundle.version;
+  const evidence = {
+    workflowEvidence: {
+      requiredToolsUsed: [...allWorkflowTools],
+      toolResults: [],
+      resourcesRead: ["design://workflow"],
+      coverageProfile: "enterprise",
+      coverageInspected: true,
+    },
+    componentSourceEvidence: {
+      mode: "html-adapter",
+      targetPlatform: "html",
+      targetFramework: "static",
+      components: [
+        {
+          id: "component:button",
+          sourceChecked: true,
+          usageChecked: true,
+          sourceFiles: ["components/Button/component.json"],
+          adapterRationale: "The test artifact is static HTML and no HTML mapping exists.",
+          canonicalStructureMirrored: true,
+        },
+        {
+          id: "component:card",
+          sourceChecked: true,
+          usageChecked: true,
+          sourceFiles: [
+            "components/Card/component.json",
+            "components/Card/Card.tsx",
+            "components/Card/Helper.tsx",
+            "components/Card/card.css",
+          ],
+          adapterRationale: "The test artifact is static HTML and no HTML mapping exists.",
+          canonicalStructureMirrored: true,
+        },
+      ],
+    },
+    tokenResolutionEvidence: {
+      resolvedTokens: [
+        { id: "token:color.action.primary" },
+        { id: "token:color.action.danger" },
+        { id: "token:color.surface.default" },
+      ],
+      cssVariables: ["--color-action-primary", "--color-action-danger", "--color-surface-default"],
+    },
+    decisionEvidence: {
+      explainedEntities: ["component:button", "component:card", "token:color.action.primary"],
+    },
+  };
+  const expectedHashes = await expectedWorkflowResultHashesForInput(fixtureBundle, evidence);
+  return {
+    ...evidence,
+    workflowEvidence: {
+      ...evidence.workflowEvidence,
+      toolResults: allWorkflowTools.map((tool) => ({
+        tool,
+        ok: true,
+        bundleVersion: fixtureBundleVersion,
+        resultHash: expectedHashes.get(tool) ?? `sha256:${tool}-not-verifiable-in-cli-test`,
+      })),
+    },
+  };
+}
 
 beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "ds-mcp-validate-cli-"));
@@ -239,6 +331,7 @@ describe("validate CLI", () => {
     await fs.writeFile(
       contract,
       JSON.stringify({
+        ...(await requiredContractEvidence()),
         contrastPairs: [{ foreground: "#fff", background: "#fff", minimumRatio: 4.5 }],
       }),
       "utf8",
@@ -252,7 +345,7 @@ describe("validate CLI", () => {
     });
   });
 
-  it("final_check mode passes with clean code, composition evidence, and contract evidence", async () => {
+  it("final_check mode fails closed when contract evidence lacks a server audit session", async () => {
     const file = path.join(tmpDir, "clean.tsx");
     const plan = path.join(tmpDir, "composition.json");
     const contract = path.join(tmpDir, "handoff.json");
@@ -278,6 +371,7 @@ describe("validate CLI", () => {
     await fs.writeFile(
       contract,
       JSON.stringify({
+        ...(await requiredContractEvidence()),
         contrastPairs: [
           {
             foreground: "token:color.text.primary",
@@ -303,29 +397,24 @@ describe("validate CLI", () => {
       "utf8",
     );
 
-    const { stdout } = await execFileAsync(TSX_BIN, [
-      ENTRY,
-      "--source",
-      FIXTURE,
-      "--mode",
-      "final_check",
-      "--format",
-      "json",
-      "--composition",
-      plan,
-      "--contract",
-      contract,
-      file,
-    ]);
-
-    const parsed = JSON.parse(stdout) as {
-      ok: boolean;
-      harness: { mode: string; missingEvidence: string[] };
-    };
-    expect(parsed.ok).toBe(true);
-    expect(parsed.harness).toEqual({
-      mode: "final_check",
-      missingEvidence: [],
+    await expect(
+      execFileAsync(TSX_BIN, [
+        ENTRY,
+        "--source",
+        FIXTURE,
+        "--mode",
+        "final_check",
+        "--format",
+        "json",
+        "--composition",
+        plan,
+        "--contract",
+        contract,
+        file,
+      ]),
+    ).rejects.toMatchObject({
+      code: 1,
+      stdout: expect.stringContaining('"ruleId": "workflow-session-missing"'),
     });
   });
 });
