@@ -152,4 +152,22 @@ describe("validate_design_contract", () => {
       expect.arrayContaining(["contrast-token-unresolved", "package-component-missing"]),
     );
   });
+
+  it("fails themed handoff evidence when component tokens lack theme variants", async () => {
+    const result = await handler.handle(
+      {
+        themeCoverage: {
+          themes: ["dark", "highContrast"],
+          components: ["component:button"],
+          tokens: ["token:color.action.primary"],
+        },
+      },
+      ctx(),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.violations.map((violation) => violation.ruleId)).toContain(
+      "theme-token-variant-missing",
+    );
+    expect(result.violations[0]?.message).toContain("token:theme.dark.color.action.primary");
+  });
 });

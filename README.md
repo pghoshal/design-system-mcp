@@ -804,6 +804,11 @@ Example `validate_design_contract` request:
     "seriesTokens": ["token:dataviz.risk.high"],
     "summary": "High risk invoice exposure increased this week."
   },
+  "themeCoverage": {
+    "themes": ["light", "dark", "highContrast"],
+    "components": ["component:card", "component:data-table", "component:button"],
+    "tokens": ["token:color.surface.muted", "token:color.action.primary"]
+  },
   "layout": {
     "gapTokens": ["token:space.4"],
     "rawValues": [],
@@ -849,7 +854,7 @@ Example `validate_design_contract` request:
 }
 ```
 
-`validate_design_contract` returns `ok: false` when it finds error-severity handoff gaps such as unresolved or low-contrast color pairs, non-`token:dataviz.*` chart colors, missing chart summaries, raw layout values, undeclared package dependencies, missing or incompatible peer dependencies, platform package/import mismatches, visual baseline/diff changes, or unmapped Figma/Sketch/Markdown/token import items.
+`validate_design_contract` returns `ok: false` when it finds error-severity handoff gaps such as unresolved or low-contrast color pairs, missing theme variants for component-critical color/state/data-viz tokens, non-`token:dataviz.*` chart colors, missing chart summaries, raw layout values, undeclared package dependencies, missing or incompatible peer dependencies, platform package/import mismatches, visual baseline/diff changes, or unmapped Figma/Sketch/Markdown/token import items.
 
 `validate_ui` also runs built-in semantic token, accessibility, and copy/voice checks:
 

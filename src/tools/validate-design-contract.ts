@@ -3,6 +3,7 @@ import type { Entity } from "../bundle/types.js";
 import type { ToolHandler } from "../server/types.js";
 
 const SeveritySchema = z.enum(["error", "warning", "info"]);
+const ThemeNameSchema = z.enum(["light", "dark", "highContrast"]);
 
 const ContractViolationSchema = z.object({
   ruleId: z.string(),
@@ -81,9 +82,16 @@ const ExternalDesignImportSchema = z.object({
   unmappedItems: z.array(z.string()).default([]),
 });
 
+const ThemeCoverageSchema = z.object({
+  themes: z.array(ThemeNameSchema).min(1),
+  tokens: z.array(z.string().min(1)).default([]),
+  components: z.array(z.string().min(1)).default([]),
+});
+
 export const ValidateDesignContractInput = z.object({
-  theme: z.enum(["light", "dark", "highContrast"]).optional(),
+  theme: ThemeNameSchema.optional(),
   contrastPairs: z.array(ContrastPairSchema).default([]),
+  themeCoverage: ThemeCoverageSchema.optional(),
   dataViz: DataVizSchema.optional(),
   layout: LayoutSchema.optional(),
   packages: z.array(PackageSchema).default([]),
@@ -112,6 +120,7 @@ export const handler: ToolHandler<
     const bundle = ctx.source.current();
     const violations: z.infer<typeof ContractViolationSchema>[] = [
       ...validateContrast(bundle.entities, input.contrastPairs),
+      ...validateThemeCoverage(bundle.entities, input.themeCoverage),
       ...validateDataViz(bundle.entities, input.dataViz),
       ...validateLayout(bundle.entities, input.layout),
       ...validatePackages(bundle.entities, input.packages),
@@ -156,6 +165,81 @@ function validateContrast(
     }
   }
   return out;
+}
+
+function validateThemeCoverage(
+  entities: ReadonlyMap<string, Entity>,
+  coverage: z.infer<typeof ThemeCoverageSchema> | undefined,
+): z.infer<typeof ContractViolationSchema>[] {
+  if (!coverage) return [];
+  const out: z.infer<typeof ContractViolationSchema>[] = [];
+  const required = new Set(coverage.tokens.map(normalizeTokenId));
+
+  for (const componentId of coverage.components) {
+    const component = entities.get(componentId);
+    if (!component || component.type !== "component") {
+      out.push({
+        ruleId: "theme-coverage-component-missing",
+        severity: "error",
+        path: "themeCoverage.components",
+        message: `${componentId} is not a known component for theme coverage.`,
+      });
+      continue;
+    }
+    for (const token of componentTokens(component)) required.add(token);
+  }
+
+  for (const token of required) {
+    if (token.startsWith("token:theme.")) continue;
+    if (!isThemeSensitiveToken(token)) continue;
+    const source = entities.get(token);
+    if (!source || source.type !== "token") {
+      out.push({
+        ruleId: "theme-coverage-token-missing",
+        severity: "error",
+        path: "themeCoverage.tokens",
+        message: `${token} is not a known token for theme coverage.`,
+      });
+      continue;
+    }
+    const tokenPath = token.slice("token:".length);
+    for (const theme of coverage.themes) {
+      const themedToken = `token:theme.${theme}.${tokenPath}`;
+      if (!entities.has(themedToken)) {
+        out.push({
+          ruleId: "theme-token-variant-missing",
+          severity: "error",
+          path: `themeCoverage.${theme}`,
+          message: `${token} is used in a themed handoff but ${themedToken} does not exist.`,
+          sourceEntity: token,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+function componentTokens(component: Entity): string[] {
+  const out = new Set<string>();
+  if (Array.isArray(component.data.tokens)) {
+    for (const token of component.data.tokens) {
+      if (typeof token === "string") out.add(normalizeTokenId(token));
+    }
+  }
+  if (Array.isArray(component.data.platforms)) {
+    for (const platform of component.data.platforms) {
+      if (!isRecord(platform) || !isRecord(platform.tokens)) continue;
+      for (const token of Object.values(platform.tokens)) {
+        if (typeof token === "string") out.add(normalizeTokenId(token));
+      }
+    }
+  }
+  return [...out];
+}
+
+function isThemeSensitiveToken(token: string): boolean {
+  const path = token.slice("token:".length);
+  return path.startsWith("color.") || path.startsWith("state.") || path.startsWith("dataviz.");
 }
 
 function validateDataViz(
