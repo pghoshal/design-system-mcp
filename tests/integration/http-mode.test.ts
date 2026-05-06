@@ -289,18 +289,9 @@ describe("Phase 2 — HTTP transport", () => {
               "resolve_token",
               "validate_composition",
               "validate_ui",
-              "validate_design_contract",
               "explain_decision",
             ],
-            toolResults: [
-              ...toolResults,
-              {
-                tool: "validate_design_contract",
-                ok: true,
-                bundleVersion,
-                resultHash: "sha256:current-call",
-              },
-            ],
+            toolResults: [...toolResults],
             resourcesRead: ["design://workflow"],
             coverageProfile: "enterprise",
             coverageInspected: true,
@@ -443,7 +434,6 @@ describe("Phase 2 — HTTP transport", () => {
       expect(workflowJson.requiredSequence).toContain("inspect_coverage");
       expect(workflowJson.requiredSequence).toContain("get_component_source");
       expect(workflowJson.requiredSequence).toContain("resolve_token");
-      expect(workflowJson.requiredSequence).toContain("validate_design_contract");
       expect(workflowJson.finalGate.mode).toBe("final_check");
       expect(workflowJson.finalGate.requiredTools).toContain("validate_ui");
       expect(workflowJson.finalGate.requiredTools).toContain("get_component_source");

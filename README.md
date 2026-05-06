@@ -815,7 +815,6 @@ Example `validate_design_contract` request:
       "resolve_token",
       "validate_composition",
       "validate_ui",
-      "validate_design_contract",
       "explain_decision"
     ],
     "toolResults": [
@@ -832,7 +831,6 @@ Example `validate_design_contract` request:
       { "tool": "resolve_token", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:<verified by validate_design_contract>" },
       { "tool": "validate_composition", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
       { "tool": "validate_ui", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
-      { "tool": "validate_design_contract", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:..." },
       { "tool": "explain_decision", "ok": true, "bundleVersion": "abc123-2026-05-05T12:00:00.000Z", "resultHash": "sha256:<verified by validate_design_contract>" }
     ],
     "resourcesRead": ["design://workflow"],

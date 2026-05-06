@@ -110,7 +110,6 @@ describe("Phase 4 — stdio transport", () => {
       "get_component_source",
       "recommend_composition",
       "validate_composition",
-      "validate_design_contract",
       "inspect_coverage",
       "explain_decision",
     ]) {
@@ -181,7 +180,6 @@ describe("Phase 4 — stdio transport", () => {
     expect(workflowJson.requiredSequence).toContain("inspect_coverage");
     expect(workflowJson.requiredSequence).toContain("get_component_source");
     expect(workflowJson.requiredSequence).toContain("resolve_token");
-    expect(workflowJson.requiredSequence).toContain("validate_design_contract");
     expect(workflowJson.finalGate.requiredTools).toContain("validate_composition");
     expect(workflowJson.finalGate.requiredTools).toContain("get_component_source");
     expect(workflowJson.finalGate.requiredEvidence).toContain("workflowEvidence");

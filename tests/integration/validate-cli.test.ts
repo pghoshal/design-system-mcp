@@ -36,7 +36,6 @@ const allWorkflowTools = [
   "resolve_token",
   "validate_composition",
   "validate_ui",
-  "validate_design_contract",
   "explain_decision",
 ] as const;
 

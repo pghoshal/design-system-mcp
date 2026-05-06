@@ -106,7 +106,6 @@ const RequiredWorkflowToolSchema = z.enum([
   "resolve_token",
   "validate_composition",
   "validate_ui",
-  "validate_design_contract",
   "explain_decision",
 ]);
 
@@ -288,7 +287,6 @@ const REQUIRED_FINAL_HANDOFF_TOOLS: readonly z.infer<typeof RequiredWorkflowTool
   "resolve_token",
   "validate_composition",
   "validate_ui",
-  "validate_design_contract",
   "explain_decision",
 ];
 
@@ -376,7 +374,7 @@ async function validateWorkflowEvidence(
     const expectedHash = expectedHashes.get(tool);
     const audited = auditResults.get(tool);
     const hashToVerify = audited?.resultHash ?? expectedHash;
-    if (audit && tool !== "start_workflow" && tool !== "validate_design_contract" && !audited) {
+    if (audit && tool !== "start_workflow" && !audited) {
       out.push({
         ruleId: "workflow-tool-not-audited",
         severity: "error",

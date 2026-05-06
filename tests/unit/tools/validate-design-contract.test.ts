@@ -33,7 +33,6 @@ const allWorkflowTools = [
   "resolve_token",
   "validate_composition",
   "validate_ui",
-  "validate_design_contract",
   "explain_decision",
 ] as const;
 
@@ -250,7 +249,7 @@ describe("validate_design_contract", () => {
       {
         ...(await requiredEvidence()),
         workflowEvidence: {
-          requiredToolsUsed: ["describe_schema", "validate_ui", "validate_design_contract"],
+          requiredToolsUsed: ["describe_schema", "validate_ui"],
           resourcesRead: [],
           coverageProfile: "community",
           coverageInspected: false,
